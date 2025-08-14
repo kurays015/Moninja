@@ -1,103 +1,170 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { usePrivy } from "@privy-io/react-auth";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [score, setScore] = useState(0);
+  const [gameEnded, setGameEnded] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [gameTime, setGameTime] = useState(30); // 30 second game
+  const [gameStarted, setGameStarted] = useState(false);
+  
+  const { login, logout, authenticated, user } = usePrivy();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const startGame = () => {
+    setScore(0);
+    setGameEnded(false);
+    setGameStarted(true);
+    setGameTime(30);
+    
+    const timer = setInterval(() => {
+      setGameTime((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setGameEnded(true);
+          setGameStarted(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleClick = () => {
+    if (gameStarted && !gameEnded) {
+      setScore(score + 1);
+    }
+  };
+
+  const submitScore = async () => {
+    if (!authenticated || !user?.wallet?.address) {
+      alert("Please connect your wallet first!");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/submit-score", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          player: user.wallet.address,
+          scoreAmount: score,
+          transactionAmount: 0,
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        alert(`Score submitted successfully! Transaction hash: ${result.transactionHash}`);
+      } else {
+        alert(`Error submitting score: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Error submitting score:", error);
+      alert("Error submitting score. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const resetGame = () => {
+    setScore(0);
+    setGameEnded(false);
+    setGameStarted(false);
+    setGameTime(30);
+  };
+
+  return (
+    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-8">
+      <div className="max-w-md w-full text-center space-y-8">
+        <h1 className="text-4xl font-bold mb-8">Click Attack!</h1>
+        
+        {/* Wallet Connection */}
+        <div className="mb-8">
+          {authenticated ? (
+            <div className="space-y-2">
+              <p className="text-green-400">✓ Wallet Connected</p>
+              <p className="text-sm text-gray-400">{user?.wallet?.address}</p>
+              <button
+                onClick={logout}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm"
+              >
+                Disconnect
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={login}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold"
+            >
+              Connect Wallet
+            </button>
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Game Stats */}
+        <div className="bg-gray-900 p-6 rounded-lg">
+          <div className="text-2xl font-bold mb-2">Score: {score}</div>
+          <div className="text-lg">Time: {gameTime}s</div>
+        </div>
+
+        {/* Game Controls */}
+        {!gameStarted && !gameEnded && (
+          <button
+            onClick={startGame}
+            className="w-full py-4 bg-green-600 hover:bg-green-700 rounded-lg text-xl font-bold"
+          >
+            Start Game
+          </button>
+        )}
+
+        {gameStarted && !gameEnded && (
+          <button
+            onClick={handleClick}
+            className="w-full py-8 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 rounded-lg text-2xl font-bold transform active:scale-95 transition-transform"
+          >
+            CLICK ME! 🎯
+          </button>
+        )}
+
+        {gameEnded && (
+          <div className="space-y-4">
+            <div className="bg-yellow-900 p-4 rounded-lg">
+              <h2 className="text-xl font-bold mb-2">Game Over!</h2>
+              <p className="text-lg">Final Score: {score}</p>
+              <p className="text-sm text-gray-300">Clicks per second: {(score / 30).toFixed(1)}</p>
+            </div>
+            
+            <div className="flex gap-4">
+              <button
+                onClick={resetGame}
+                className="flex-1 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold"
+              >
+                Play Again
+              </button>
+              
+              {authenticated && (
+                <button
+                  onClick={submitScore}
+                  disabled={submitting}
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 rounded-lg font-semibold"
+                >
+                  {submitting ? "Submitting..." : "Submit Score"}
+                </button>
+              )}
+            </div>
+            
+            {!authenticated && (
+              <p className="text-yellow-400 text-sm">Connect your wallet to submit your score!</p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
