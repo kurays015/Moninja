@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
+import MonadAuth from "./components/MonadAuth";
 
 export default function Home() {
   const [score, setScore] = useState(0);
@@ -9,8 +10,9 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
   const [gameTime, setGameTime] = useState(30); // 30 second game
   const [gameStarted, setGameStarted] = useState(false);
+  const [monadAccountAddress, setMonadAccountAddress] = useState<string | null>(null);
   
-  const { login, logout, authenticated, user } = usePrivy();
+  const { authenticated } = usePrivy();
 
   const startGame = () => {
     setScore(0);
@@ -38,8 +40,8 @@ export default function Home() {
   };
 
   const submitScore = async () => {
-    if (!authenticated || !user?.wallet?.address) {
-      alert("Please connect your wallet first!");
+    if (!authenticated || !monadAccountAddress) {
+      alert("Please connect your Monad Games ID account first!");
       return;
     }
 
@@ -51,7 +53,7 @@ export default function Home() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          player: user.wallet.address,
+          player: monadAccountAddress,
           scoreAmount: score,
           transactionAmount: 0,
         }),
@@ -84,27 +86,9 @@ export default function Home() {
       <div className="max-w-md w-full text-center space-y-8">
         <h1 className="text-4xl font-bold mb-8">Click Attack!</h1>
         
-        {/* Wallet Connection */}
+        {/* Monad Games Authentication */}
         <div className="mb-8">
-          {authenticated ? (
-            <div className="space-y-2">
-              <p className="text-green-400">✓ Wallet Connected</p>
-              <p className="text-sm text-gray-400">{user?.wallet?.address}</p>
-              <button
-                onClick={logout}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm"
-              >
-                Disconnect
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={login}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold"
-            >
-              Connect Wallet
-            </button>
-          )}
+          <MonadAuth onAccountAddress={setMonadAccountAddress} />
         </div>
 
         {/* Game Stats */}
@@ -148,7 +132,7 @@ export default function Home() {
                 Play Again
               </button>
               
-              {authenticated && (
+              {monadAccountAddress && (
                 <button
                   onClick={submitScore}
                   disabled={submitting}
@@ -159,8 +143,8 @@ export default function Home() {
               )}
             </div>
             
-            {!authenticated && (
-              <p className="text-yellow-400 text-sm">Connect your wallet to submit your score!</p>
+            {!monadAccountAddress && (
+              <p className="text-yellow-400 text-sm">Connect your Monad Games ID to submit your score!</p>
             )}
           </div>
         )}
