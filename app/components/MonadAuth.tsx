@@ -10,10 +10,46 @@ interface MonadAuthProps {
   onAccountAddress?: (address: string | null) => void;
 }
 
+interface UserData {
+  hasUsername: boolean;
+  user: {
+    id: number;
+    username: string;
+    walletAddress: string;
+  };
+}
+
 export default function MonadAuth({ onAccountAddress }: MonadAuthProps) {
   const { authenticated, user, ready, logout, login } = usePrivy();
   const [accountAddress, setAccountAddress] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
+  const [loadingUsername, setLoadingUsername] = useState<boolean>(false);
   const [message, setMessage] = useState<string>("");
+
+  const fetchUsername = async (walletAddress: string) => {
+    setLoadingUsername(true);
+    try {
+      const response = await fetch(
+        `https://monad-games-id-site.vercel.app/api/check-wallet?wallet=${walletAddress}`
+      );
+      
+      if (response.ok) {
+        const data: UserData = await response.json();
+        if (data.hasUsername && data.user?.username) {
+          setUsername(data.user.username);
+        } else {
+          setUsername(null);
+        }
+      } else {
+        setUsername(null);
+      }
+    } catch (error) {
+      console.error("Error fetching username:", error);
+      setUsername(null);
+    } finally {
+      setLoadingUsername(false);
+    }
+  };
 
   useEffect(() => {
     // Check if privy is ready and user is authenticated
@@ -33,12 +69,14 @@ export default function MonadAuth({ onAccountAddress }: MonadAuthProps) {
             const address = crossAppAccount.embeddedWallets[0].address;
             setAccountAddress(address);
             setMessage("");
+            fetchUsername(address);
             if (onAccountAddress) {
               onAccountAddress(address);
             }
           } else {
             setMessage("No embedded wallets found in your Monad Games ID account.");
             setAccountAddress(null);
+            setUsername(null);
             if (onAccountAddress) {
               onAccountAddress(null);
             }
@@ -46,6 +84,7 @@ export default function MonadAuth({ onAccountAddress }: MonadAuthProps) {
         } else {
           setMessage("Monad Games ID account not found in linked accounts.");
           setAccountAddress(null);
+          setUsername(null);
           if (onAccountAddress) {
             onAccountAddress(null);
           }
@@ -53,6 +92,7 @@ export default function MonadAuth({ onAccountAddress }: MonadAuthProps) {
       } else {
         setMessage("You need to link your Monad Games ID account to continue.");
         setAccountAddress(null);
+        setUsername(null);
         if (onAccountAddress) {
           onAccountAddress(null);
         }
@@ -60,6 +100,7 @@ export default function MonadAuth({ onAccountAddress }: MonadAuthProps) {
     } else if (ready && !authenticated) {
       setMessage("Please connect your wallet to continue.");
       setAccountAddress(null);
+      setUsername(null);
       if (onAccountAddress) {
         onAccountAddress(null);
       }
@@ -93,7 +134,19 @@ export default function MonadAuth({ onAccountAddress }: MonadAuthProps) {
           {accountAddress ? (
             <div className="text-center space-y-2">
               <p className="text-green-400">✓ Monad Games ID Connected</p>
-              <p className="text-sm text-gray-400 break-all">{accountAddress}</p>
+              {loadingUsername ? (
+                <p className="text-gray-400">Loading username...</p>
+              ) : username ? (
+                <div className="space-y-1">
+                  <p className="text-lg font-semibold text-white">@{username}</p>
+                  <p className="text-xs text-gray-400 break-all">{accountAddress}</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <p className="text-yellow-400">No username found</p>
+                  <p className="text-xs text-gray-400 break-all">{accountAddress}</p>
+                </div>
+              )}
               <button
                 onClick={logout}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm"
