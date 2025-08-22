@@ -178,9 +178,7 @@ export default function Moninja() {
         type,
         fruitName,
         x: startX,
-        y:
-          (rect ? rect.height : window.innerHeight) -
-          (100 + Math.random() * 100),
+        y: (rect ? rect.height : window.innerHeight) - 80, // Spawn at bottom, accounting for object height
         velocityX,
         velocityY,
         rotation: 0,
@@ -1067,9 +1065,9 @@ export default function Moninja() {
     >
       {/* Pause Overlay */}
       {gamePaused && gameStarted && !gameOver && (
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-lg shadow-2xl text-center">
-            <h2 className="text-4xl font-bold text-blue-600 mb-4">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white/95 backdrop-blur-md p-8 rounded-3xl shadow-2xl border border-white/30 text-center max-w-md w-[92%]">
+            <h2 className="text-4xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
               Game Paused
             </h2>
             <p className="text-lg text-gray-700 mb-4">
@@ -1078,7 +1076,7 @@ export default function Moninja() {
             <p className="text-sm text-gray-600 mb-6">
               Click anywhere or return to the tab to resume playing!
             </p>
-            <div className="text-xl text-gray-700">
+            <div className="text-xl text-gray-700 bg-gradient-to-r from-purple-100 to-blue-100 p-4 rounded-2xl border border-purple-200">
               Current Score:{" "}
               <span className="font-bold text-purple-600">{score}</span>
             </div>
@@ -1314,7 +1312,7 @@ export default function Moninja() {
 
       {/* Game Stats */}
       {gameStarted && (
-        <div className="absolute top-32 left-4 bg-white bg-opacity-90 px-4 py-2 rounded-lg shadow-lg">
+        <div className="absolute top-24 left-4 bg-white bg-opacity-90 px-4 py-2 rounded-lg shadow-lg">
           <p className="text-sm text-gray-700">
             Active Objects:{" "}
             <span className="font-bold text-purple-600">{objects.length}</span>
