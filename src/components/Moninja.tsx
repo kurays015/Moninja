@@ -239,7 +239,7 @@ export default function Moninja() {
     return shouldTriggerFrenzy && !frenzyMode; // Don't trigger if already in frenzy
   }, [score, frenzyMode]);
 
-  // Generate a frenzy wave (lots of fruits, no bombs)
+  // Generate a frenzy wave
   const createFrenzyWave = useCallback((): void => {
     if (gamePaused || bombHit) return;
 
@@ -1173,7 +1173,7 @@ export default function Moninja() {
             <div className="relative w-full h-full">
               <Image
                 src={`/monanimals/${obj.fruitName ?? "MolandakHD.png"}`}
-                alt="fruit"
+                alt="monanimal"
                 width={100}
                 height={100}
                 className="w-full h-full object-contain drop-shadow-[0_0_15px_gold]"
