@@ -8,8 +8,6 @@ Create a `.env.local` file in the root directory with:
 # Privy Configuration
 NEXT_PUBLIC_PRIVY_APP_ID=your_privy_app_id_here
 
-# Wallet Configuration for Contract Interaction
-PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
 ```
 
 ## Features
