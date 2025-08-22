@@ -1,7 +1,7 @@
-"use client";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { PrivyProvider } from "@privy-io/react-auth";
+import { Metadata } from "next";
+import Providers from "./providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,6 +13,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const metadata: Metadata = {
+  title: "Moninja",
+  creator: "Kurays",
+};
 
 export default function RootLayout({
   children,
@@ -22,18 +26,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased relative w-full h-screen overflow-hidden select-none game-area`}
       >
-        <PrivyProvider
-          appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ""}
-          config={{
-            loginMethodsAndOrder: {
-              primary: ['privy:cmd8euall0037le0my79qpz42'],
-            },
-          }}
-        >
-          {children}
-        </PrivyProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

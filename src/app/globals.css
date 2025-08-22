@@ -1,0 +1,428 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  cursor: url("/sword-cursor.cur") 16 16, auto !important;
+}
+
+/* Ensure wood background is visible */
+html,
+body {
+  background-image: url("/wood.png") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+  min-height: 100vh !important;
+}
+
+/* Prevent dragging on images and game elements */
+img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
+}
+
+/* Prevent text selection on game elements */
+.game-area {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+@keyframes sliceHalfLeft {
+  0% {
+    transform: translateX(0) translateY(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  30% {
+    transform: translateX(-10px) translateY(-5px) rotate(-30deg) scale(1.15); /* pop */
+  }
+  100% {
+    transform: translateX(-40px) translateY(-30px) rotate(-180deg) scale(1.1);
+    opacity: 0;
+  }
+}
+
+@keyframes sliceHalfRight {
+  0% {
+    transform: translateX(0) translateY(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  30% {
+    transform: translateX(10px) translateY(-5px) rotate(30deg) scale(1.15); /* pop */
+  }
+  100% {
+    transform: translateX(40px) translateY(-30px) rotate(180deg) scale(1.1);
+    opacity: 0;
+  }
+}
+
+@keyframes explodeFragment1 {
+  0% {
+    transform: translateX(0) translateY(0) rotate(12deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50px) translateY(-40px) rotate(200deg);
+    opacity: 0;
+  }
+}
+
+@keyframes explodeFragment2 {
+  0% {
+    transform: translateX(0) translateY(0) rotate(45deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(45px) translateY(-35px) rotate(270deg);
+    opacity: 0;
+  }
+}
+
+@keyframes explodeFragment3 {
+  0% {
+    transform: translateX(0) translateY(0) rotate(-12deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-30px) translateY(50px) rotate(-180deg);
+    opacity: 0;
+  }
+}
+
+@keyframes explodeFragment4 {
+  0% {
+    transform: translateX(0) translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(55px) translateY(45px) scale(0.2);
+    opacity: 0;
+  }
+}
+
+@keyframes explosionFlash {
+  0% {
+    transform: scale(0.3);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(2);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+@keyframes comboText {
+  0% {
+    transform: scale(0.5) translateY(0);
+    opacity: 0;
+  }
+  20% {
+    transform: scale(1.2) translateY(-10px);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1) translateY(-20px);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8) translateY(-40px);
+    opacity: 0;
+  }
+}
+
+@keyframes startButtonPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px rgba(34, 197, 94, 0.8);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+  }
+}
+
+@keyframes sparkle {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1) rotate(180deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0.3) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes juiceSpray {
+  0% {
+    transform: scale(0.2) translateY(0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1) translateY(-20px);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(0.5) translateY(-60px);
+    opacity: 0;
+  }
+}
+
+@keyframes sliceLineEffect {
+  0% {
+    opacity: 1;
+    transform: scaleX(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes monadPulse {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.8));
+  }
+  50% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 30px rgba(168, 85, 247, 1));
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.8));
+  }
+}
+
+@keyframes monadSlash {
+  0% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.8));
+  }
+  25% {
+    transform: scale(1.3) rotate(90deg);
+    opacity: 0.9;
+    filter: drop-shadow(0 0 40px rgba(168, 85, 247, 1));
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 30px rgba(236, 72, 153, 1));
+  }
+  75% {
+    transform: scale(1.3) rotate(270deg);
+    opacity: 0.9;
+    filter: drop-shadow(0 0 40px rgba(168, 85, 247, 1));
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.8));
+  }
+}
+
+@keyframes monadSlashRing {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5) rotate(180deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes monadSlashSparkle {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1) rotate(180deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes monadFinalExplosion {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(1.5);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(2.5);
+    opacity: 0.7;
+  }
+  75% {
+    transform: scale(3.5);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+@keyframes monadExplosionFragment {
+  0% {
+    transform: translateX(0) translateY(0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(var(--explode-x)) translateY(var(--explode-y))
+      scale(0.2) rotate(var(--explode-rotate));
+    opacity: 0;
+  }
+}
+
+@keyframes monadHit {
+  0% {
+    transform: scale(0.8) rotate(0deg);
+    opacity: 0.7;
+  }
+  30% {
+    transform: scale(1.3) rotate(10deg);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(1.1) rotate(-5deg);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0;
+  }
+}
+
+@keyframes monadRing {
+  0% {
+    transform: scale(0.2);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes monadSlashLine {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.5) rotate(var(--angle, 0deg));
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1.2) rotate(var(--angle, 0deg));
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(0.8) rotate(var(--angle, 0deg));
+  }
+}
+
+@keyframes monadParticle {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+}
+
+@keyframes monadShatter {
+  0% {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(
+        calc(-50% + var(--shatter-distance) * cos(var(--shatter-angle))),
+        calc(-50% + var(--shatter-distance) * sin(var(--shatter-angle)))
+      )
+      scale(0.8) rotate(var(--shatter-angle));
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(
+        calc(-50% + var(--shatter-distance) * 1.5 * cos(var(--shatter-angle))),
+        calc(-50% + var(--shatter-distance) * 1.5 * sin(var(--shatter-angle)))
+      )
+      scale(0.3) rotate(calc(var(--shatter-angle) * 2));
+    opacity: 0;
+  }
+}
+
+@keyframes monadShatterFlash {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}

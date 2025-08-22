@@ -12,6 +12,7 @@
     "@privy-io/react-auth": "^2.21.2",
     "@privy-io/wagmi": "^1.0.6",
     "ethers": "^6.15.0",
+    "framer-motion": "^12.23.12",
     "next": "15.4.6",
     "react": "19.1.0",
     "react-dom": "19.1.0",

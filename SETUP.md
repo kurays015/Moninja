@@ -21,15 +21,19 @@ PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
 
 ## Game Flow
 
-1. Connect your wallet using Privy
-2. Start a 30-second clicking game
-3. Click the button as many times as possible
-4. Submit your final score to the blockchain
-5. View transaction confirmation
+1. Login via email with privy Monad Games ID
+2. Slash/Slice Monanimals to earn points
+3. Submit your final score to the blockchain
+4. View transaction confirmation
+
+##
+
+--Add sound on start, bomb, slice, combo,
+--fix game over modal
 
 ## Contract Details
 
-- **Address**: `0xceCBFF203C8B6044F52CE23D914A1bfD997541A4`
+- **Contract Address**: `0xceCBFF203C8B6044F52CE23D914A1bfD997541A4`
 - **Network**: Monad Testnet
 - **Function**: `updatePlayerData(address player, uint256 scoreAmount, uint256 transactionAmount)`
 
