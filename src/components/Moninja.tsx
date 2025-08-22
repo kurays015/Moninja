@@ -304,7 +304,7 @@ export default function Moninja() {
     }
 
     // Show frenzy notification
-    setFrenzyNotification("FRUIT FRENZY!");
+    setFrenzyNotification("MONANIMAL FRENZY!");
 
     // Hide notification after 3 seconds
     setTimeout(() => {
