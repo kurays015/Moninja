@@ -1316,7 +1316,7 @@ export default function Moninja() {
                 </svg>
               </div>
               <p className="text-yellow-400 text-xs">
-                Please connect your wallet to continue.
+                Please create a username to play
               </p>
               <button
                 onClick={handleLogout}

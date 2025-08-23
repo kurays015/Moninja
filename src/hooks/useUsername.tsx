@@ -80,4 +80,3 @@ export function useUsername(walletAddress: string | null) {
     refetch,
   };
 }
-
