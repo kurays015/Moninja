@@ -31,6 +31,7 @@ import SlashTrail from "./SlashTrail";
 import { usePlayerTotalScore } from "../hooks/usePlayerTotalScore";
 import { usePrivy } from "@privy-io/react-auth";
 import { useUsername } from "../hooks/useUsername";
+import PauseButton from "./PauseButton";
 
 export default function Moninja() {
   const [score, setScore] = useState<number>(0);
@@ -1181,6 +1182,12 @@ export default function Moninja() {
     logout();
   };
 
+  const togglePause = useCallback(() => {
+    if (gameStarted && !gameOver && !bombHit) {
+      setGamePaused(prev => !prev);
+    }
+  }, [gameStarted, gameOver, bombHit]);
+
   return (
     <div
       ref={gameAreaRef}
@@ -1200,6 +1207,14 @@ export default function Moninja() {
         score={score}
         objects={objects}
         gameStats={gameStats}
+      />
+
+      <PauseButton
+        bombHit={bombHit}
+        gameOver={gameOver}
+        gamePaused={gamePaused}
+        gameStarted={gameStarted}
+        onTogglePause={() => togglePause()}
       />
 
       {/* Minimal Game UI Overlay */}
