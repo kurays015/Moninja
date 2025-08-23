@@ -72,10 +72,9 @@ export interface UserData {
   };
 }
 
-export interface AuthState {
-  accountAddress: string | null;
-  username: string | null;
-  isLoadingUsername: boolean;
-  message: string;
-  error: string | null;
+export interface SessionData {
+  player: string;
+  sessionId: string;
+  startTime: number;
+  iat: number;
 }

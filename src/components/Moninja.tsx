@@ -21,6 +21,16 @@ import Link from "next/link";
 import useAudioManager from "../hooks/useAudioManager";
 import SliceEffects from "./SliceEffects";
 import FrenzyNotification from "./FrenzyNotification";
+import Stats from "./Stats";
+import MonadFruitSlashCounter from "./MonadFruitSlashCounter";
+import GameObjects from "./GameObjects";
+import ComboEffects from "./ComboEffects";
+import PauseModal from "./PauseModal";
+import GameOverModal from "./GameOverModal";
+import SlashTrail from "./SlashTrail";
+import { usePlayerTotalScore } from "../hooks/usePlayerTotalScore";
+import { usePrivy } from "@privy-io/react-auth";
+import { useUsername } from "../hooks/useUsername";
 
 export default function Moninja() {
   const [score, setScore] = useState<number>(0);
@@ -44,6 +54,9 @@ export default function Moninja() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [frenzyMode, setFrenzyMode] = useState<boolean>(false);
   const [frenzyTimeRemaining, setFrenzyTimeRemaining] = useState<number>(0);
+  const [gameSessionToken, setGameSessionToken] = useState<string | null>(null);
+  const [gameSessionId, setGameSessionId] = useState<string | null>(null);
+  const [gameEnded, setGameEnded] = useState<boolean>(false);
 
   const gameAreaRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number | null>(null);
@@ -58,9 +71,12 @@ export default function Moninja() {
   const frenzyWaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   //hooks
+  const { logout } = usePrivy();
   const { walletAddress } = useCrossAppAccount();
   const { preloadSound, playSound, stopBombSound, cleanupAll } =
     useAudioManager();
+  const { refetch, score: totalScore } = usePlayerTotalScore(walletAddress);
+  const { username, isLoading: isLoadingUsername } = useUsername(walletAddress);
 
   // Memoized constants
   const monanimalImages = useMemo(
@@ -84,7 +100,6 @@ export default function Moninja() {
     preloadSound("game-over");
     preloadSound("bomb-fuse", 3);
     preloadSound("bomb-explode", 2);
-    preloadSound("sword");
     preloadSound("start");
 
     return () => {
@@ -131,6 +146,16 @@ export default function Moninja() {
       window.removeEventListener("focus", handleWindowFocus);
     };
   }, [gameStarted, gameOver]);
+
+  useEffect(() => {
+    if (!walletAddress || !gameStarted || gameOver) return;
+
+    const interval = setInterval(() => {
+      refetch();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [refetch, gameStarted, walletAddress, gameOver]);
 
   // Create start button
   const createStartButton = useCallback((): void => {
@@ -368,7 +393,7 @@ export default function Moninja() {
 
     const waveSize = Math.floor(Math.random() * 3) + 2;
     const bombChance = Math.min(0.4, 0.15 + score * 0.002);
-    const monadChance = 0.03; // 3% chance for monad
+    const monadChance = 0.4; // 40% chance for monad
     const minSpacing = 120;
     const rect = gameAreaRef.current?.getBoundingClientRect();
     const maxWidth = (rect ? rect.width : window.innerWidth) - 100;
@@ -479,7 +504,7 @@ export default function Moninja() {
     }
   }, [startButton, gamePaused, stopBombSound, isMonadSlashing, bombHit]);
 
-  // Batch score submission function
+  // Enhanced batch score submission with validation
   const submitScoreBatch = useCallback(
     async (finalScore?: number) => {
       const scoreToSubmit = finalScore || localScore;
@@ -494,11 +519,14 @@ export default function Moninja() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${gameSessionToken}`, // Add session token
           },
           body: JSON.stringify({
             player: walletAddress,
             transactionAmount: 1,
             scoreAmount: scoreDifference,
+            timestamp: Date.now(),
+            sessionId: gameSessionId,
           }),
         });
 
@@ -519,7 +547,14 @@ export default function Moninja() {
         setIsSubmitting(false);
       }
     },
-    [localScore, submittedScore, walletAddress, isSubmitting]
+    [
+      localScore,
+      submittedScore,
+      walletAddress,
+      isSubmitting,
+      gameSessionToken,
+      gameSessionId,
+    ]
   );
 
   // Debounced score submission
@@ -545,13 +580,50 @@ export default function Moninja() {
     [debouncedSubmit]
   );
 
-  // Submit final score when game ends
-  const handleGameEnd = useCallback(() => {
+  // Update the handleGameEnd function
+  const handleGameEnd = useCallback(async () => {
+    if (gameEnded) return; // Prevent multiple calls
+    setGameEnded(true);
+
+    // End game session when game ends
+    const endGameSession = async () => {
+      if (gameSessionId) {
+        try {
+          await fetch("/api/end-game-session", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${gameSessionToken}`,
+            },
+            body: JSON.stringify({
+              sessionId: gameSessionId,
+            }),
+          });
+        } catch (error) {
+          console.error("Error ending game session:", error);
+        } finally {
+          setGameSessionToken(null);
+          setGameSessionId(null);
+        }
+      }
+    };
+
     if (submitTimeoutRef.current) {
       clearTimeout(submitTimeoutRef.current);
     }
     submitScoreBatch(localScore);
-  }, [localScore, submitScoreBatch]);
+    await endGameSession(); // Clean up session
+
+    // Refresh the score after game ends
+    refetch();
+  }, [
+    localScore,
+    submitScoreBatch,
+    gameSessionId,
+    gameSessionToken,
+    gameEnded,
+    refetch,
+  ]);
 
   // Optimized collision detection with immediate sound effects
   const checkSlashCollisions = useCallback((): void => {
@@ -583,8 +655,6 @@ export default function Moninja() {
           setGameStarted(true);
 
           if (!gamePaused) {
-            playSound("sword");
-
             playSound("start");
           }
 
@@ -846,7 +916,6 @@ export default function Moninja() {
           animationRef.current = null;
         }
 
-        handleGameEnd();
         setTimeout(() => {
           setGameOver(true);
           setObjects([]); // Clear objects on game over
@@ -856,7 +925,10 @@ export default function Moninja() {
 
       // Update visual score
       if (pointsEarned > 0) {
-        setScore((prev: number) => prev + pointsEarned);
+        setScore(prev => {
+          const newScore = prev + pointsEarned;
+          return newScore === prev ? prev : newScore;
+        });
       }
 
       return newObjects;
@@ -868,9 +940,14 @@ export default function Moninja() {
     bombHit,
     stopBombSound,
     updateScore,
-    handleGameEnd,
     playSound,
   ]);
+
+  useEffect(() => {
+    if (gameStarted) {
+      setGameEnded(false); // Reset for new game
+    }
+  }, [gameStarted]);
 
   // Handle game over
   useEffect(() => {
@@ -1023,6 +1100,48 @@ export default function Moninja() {
     };
   }, [handleMouseDown, handleMouseMove, handleMouseUp]);
 
+  // Initialize game session when component mounts or game starts
+  // Update the useEffect that initializes game session
+  useEffect(() => {
+    const startGameSession = async () => {
+      try {
+        const res = await fetch("/api/start-game-session", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            walletAddress,
+            timestamp: Date.now(),
+          }),
+        });
+
+        if (res.ok) {
+          const { sessionToken, sessionId } = await res.json();
+          setGameSessionToken(sessionToken);
+          setGameSessionId(sessionId);
+          console.log("Game session started:", sessionId);
+          return { sessionToken, sessionId };
+        }
+        throw new Error("Failed to start game session");
+      } catch (error) {
+        console.error("Error starting game session:", error);
+        throw error;
+      }
+    };
+
+    // Add gameOver check to prevent starting session after bomb hit
+    if (
+      gameStarted &&
+      !gameSessionId &&
+      walletAddress &&
+      !gameOver &&
+      !bombHit
+    ) {
+      startGameSession();
+    }
+  }, [walletAddress, gameSessionId, gameStarted, gameOver, bombHit]);
+
   // Reset game function
   const resetGame = useCallback((): void => {
     setScore(0);
@@ -1058,59 +1177,151 @@ export default function Moninja() {
     [score]
   );
 
+  const handleLogout = () => {
+    logout();
+  };
+
   return (
     <div
       ref={gameAreaRef}
       className="relative w-full h-screen overflow-hidden select-none game-area"
     >
       {/* Pause Overlay */}
-      {gamePaused && gameStarted && !gameOver && (
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white/95 backdrop-blur-md p-8 rounded-3xl shadow-2xl border border-white/30 text-center max-w-md w-[92%]">
-            <h2 className="text-4xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
-              Game Paused
-            </h2>
-            <p className="text-lg text-gray-700 mb-4">
-              The game has been paused because you switched tabs or lost focus.
-            </p>
-            <p className="text-sm text-gray-600 mb-6">
-              Click anywhere or return to the tab to resume playing!
-            </p>
-            <div className="text-xl text-gray-700 bg-gradient-to-r from-purple-100 to-blue-100 p-4 rounded-2xl border border-purple-200">
-              Current Score:{" "}
-              <span className="font-bold text-purple-600">{score}</span>
-            </div>
-          </div>
-        </div>
-      )}
+      <PauseModal
+        gameOver={gameOver}
+        gamePaused={gamePaused}
+        gameStarted={gameStarted}
+        score={score}
+      />
 
-      {/* Score Display */}
-      {gameStarted && (
-        <div className="absolute top-4 left-4 z-50">
-          <div className="bg-yellow-200 px-6 py-3 rounded-xl shadow-lg border-4 border-yellow-400">
-            <span className="text-3xl font-extrabold text-red-700 drop-shadow-md">
-              🍉 {score}
-            </span>
-          </div>
+      {/* stats */}
+      <Stats
+        gameStarted={gameStarted}
+        score={score}
+        objects={objects}
+        gameStats={gameStats}
+      />
+
+      {/* Minimal Game UI Overlay */}
+      <div className="absolute top-4 right-4 z-50">
+        <div className="bg-black/40 backdrop-blur-sm rounded-xl border border-white/20 shadow-lg p-3 min-w-[200px]">
+          {walletAddress ? (
+            // Success state - Compact Player Profile
+            <div className="space-y-2">
+              {/* Header with logout */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-green-400 text-xs font-medium">
+                    Connected
+                  </span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer"
+                >
+                  <svg
+                    className="w-5 h-5 text-white/70"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Player Info - Compact */}
+              <div className="text-center space-y-1">
+                {isLoadingUsername ? (
+                  <div className="flex items-center justify-center gap-1 text-white/70">
+                    <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span className="text-xs">Loading...</span>
+                  </div>
+                ) : username ? (
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-white">
+                      @{username}
+                    </h3>
+                    <p className="text-xs text-white/50 font-mono">
+                      {walletAddress.slice(0, 6)}...
+                      {walletAddress.slice(-4)}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="text-yellow-400 text-xs font-medium">
+                      Anonymous Ninja
+                    </p>
+                    <Link
+                      href="https://monad-games-id-site.vercel.app"
+                      className="text-yellow-400 hover:text-yellow-300 underline text-xs"
+                      target="_blank"
+                      referrerPolicy="no-referrer"
+                    >
+                      Create Username →
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Compact Stats */}
+              <div className="border-t border-white/10 pt-2">
+                <div className="text-center">
+                  <div className="text-lg font-bold text-white">
+                    {totalScore}
+                  </div>
+                  <div className="text-xs text-white/60">Total Score</div>
+                </div>
+                <div className="text-center mt-2">
+                  <div className="text-lg font-bold text-yellow-400">-</div>
+                  <div className="text-xs text-white/60">Rank</div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            // Error state - Compact
+            <div className="text-center space-y-2">
+              <div className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto">
+                <svg
+                  className="w-3 h-3 text-yellow-400"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <p className="text-yellow-400 text-xs">
+                Please connect your wallet to continue.
+              </p>
+              <button
+                onClick={handleLogout}
+                className="w-full px-2 py-1 bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 transition-colors rounded text-red-300 text-xs font-medium"
+              >
+                Disconnect
+              </button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Frenzy Notification */}
       <FrenzyNotification notificationMessage={frenzyNotification} />
 
       {/* Monad Slash Counter */}
-      {isMonadSlashing && (
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
-          <div className="text-center">
-            <div className="text-6xl font-bold text-purple-400 drop-shadow-lg animate-pulse">
-              +{20 * monadSlashCount}
-            </div>
-            <div className="text-2xl text-purple-300 font-semibold mt-2">
-              {monadSlashCount}/10
-            </div>
-          </div>
-        </div>
-      )}
+      <MonadFruitSlashCounter
+        isMonadSlashing={isMonadSlashing}
+        monadSlashCount={monadSlashCount}
+      />
 
       {/* Start Button */}
       {!walletAddress ? (
@@ -1145,184 +1356,24 @@ export default function Moninja() {
       )}
 
       {/* Game Objects */}
-      {objects.map((obj: GameObject) => (
-        <div
-          key={obj.id}
-          className={`absolute w-20 h-20 transition-opacity duration-300 ${
-            obj.sliced ? "opacity-0" : "opacity-100"
-          }`}
-          style={{
-            left: obj.x,
-            top: obj.y,
-            transform: `rotate(${obj.rotation}deg)`,
-            pointerEvents: "none",
-          }}
-        >
-          {obj.type === "bomb" ? (
-            <Image
-              src="/Bomb.webp"
-              alt="bomb"
-              width={100}
-              height={100}
-              className="w-full h-full object-contain drop-shadow-lg"
-              draggable={false}
-            />
-          ) : obj.type === "fruit" ? (
-            <div className="relative w-full h-full">
-              <Image
-                src={`/monanimals/${obj.fruitName ?? "MolandakHD.png"}`}
-                alt="monanimal"
-                width={100}
-                height={100}
-                className="w-full h-full object-contain drop-shadow-[0_0_15px_gold]"
-                draggable={false}
-              />
-            </div>
-          ) : obj.type === "monad" ? (
-            <div className="relative w-full h-full">
-              <Image
-                src={`/monad.svg`}
-                alt="monad"
-                width={100}
-                height={100}
-                className="w-full h-full object-contain drop-shadow-[0_0_20px_purple]"
-                draggable={false}
-              />
-
-              {/* Simple slash count indicator */}
-              {obj.slashCount && obj.slashCount > 0 && (
-                <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-purple-300">
-                  {obj.slashCount}
-                </div>
-              )}
-            </div>
-          ) : null}
-        </div>
-      ))}
+      <GameObjects objects={objects} />
 
       {/* Slice Effects */}
       <SliceEffects sliceEffects={sliceEffects} />
 
       {/* Combo Effects */}
-      {comboEffects.map((combo: ComboEffect, index) => (
-        <div
-          key={index}
-          className="absolute pointer-events-none z-40 text-4xl font-bold"
-          style={{
-            left: combo.x - 50,
-            top: combo.y - 20,
-            animation: "comboText 2s ease-out forwards",
-            background: "linear-gradient(45deg, #FFD700, #FF6B35)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
-          }}
-        >
-          {combo.count}x COMBO!
-        </div>
-      ))}
+      <ComboEffects comboEffects={comboEffects} />
 
       {/* Slash Trail */}
-      {slashPath.length > 1 && (
-        <svg
-          className="absolute inset-0 pointer-events-none z-40"
-          width="100%"
-          height="100%"
-        >
-          <path
-            d={`M ${slashPath
-              .map((p: SlashPoint) => `${p.x},${p.y}`)
-              .join(" L ")}`}
-            stroke="url(#slashGradient)"
-            strokeWidth="5"
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            opacity="0.85"
-            style={{
-              filter: "drop-shadow(0 0 8px rgba(255, 215, 0, 0.9))",
-            }}
-          />
-          <defs>
-            <linearGradient
-              id="slashGradient"
-              x1="0%"
-              y1="0%"
-              x2="100%"
-              y2="0%"
-            >
-              <stop offset="0%" stopColor="#FFD700" />
-              <stop offset="50%" stopColor="#FFA500" />
-              <stop offset="100%" stopColor="#FF6347" />
-            </linearGradient>
-          </defs>
-        </svg>
-      )}
+      <SlashTrail slashPath={slashPath} />
 
       {/* Game Over Screen */}
-      {gameOver && (
-        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white/95 p-8 md:p-10 rounded-3xl shadow-2xl border border-white/30 max-w-md w-[92%] text-center">
-            <div className="text-6xl mb-2">💥</div>
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-red-500 to-fuchsia-600">
-              Game Over
-            </h2>
-            <p className="text-base md:text-lg text-gray-700 mb-6">
-              You hit a bomb. Better luck next run!
-            </p>
-
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <div className="rounded-2xl bg-gradient-to-br from-yellow-400/20 to-amber-300/20 p-4 border border-amber-300/40">
-                <div className="text-3xl font-extrabold text-amber-600">
-                  {score}
-                </div>
-                <div className="text-xs uppercase tracking-wider text-amber-800/80">
-                  Final Score
-                </div>
-              </div>
-              <div className="rounded-2xl bg-gradient-to-br from-sky-400/20 to-indigo-300/20 p-4 border border-sky-300/40">
-                <div className="text-3xl font-extrabold text-indigo-600">
-                  {gameStats.speedLevel}
-                </div>
-                <div className="text-xs uppercase tracking-wider text-indigo-800/80">
-                  Level Reached
-                </div>
-              </div>
-              <div className="rounded-2xl bg-gradient-to-br from-emerald-400/20 to-green-300/20 p-4 border border-emerald-300/40 col-span-2">
-                <div className="text-xl font-bold text-emerald-700">
-                  {gameStats.objectsSliced}
-                </div>
-                <div className="text-xs uppercase tracking-wider text-emerald-900/80">
-                  Fruits Sliced
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={resetGame}
-                className="flex-1 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
-              >
-                🔄 Play Again
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Game Stats */}
-      {gameStarted && (
-        <div className="absolute top-24 left-4 bg-white bg-opacity-90 px-4 py-2 rounded-lg shadow-lg">
-          <p className="text-sm text-gray-700">
-            Active Objects:{" "}
-            <span className="font-bold text-purple-600">{objects.length}</span>
-          </p>
-          <p className="text-xs text-gray-600">
-            Speed Level:{" "}
-            <span className="font-bold">{gameStats.speedLevel}</span>
-          </p>
-        </div>
-      )}
+      <GameOverModal
+        gameOver={gameOver}
+        gameStats={gameStats}
+        resetGame={resetGame}
+        score={score}
+      />
     </div>
   );
 }

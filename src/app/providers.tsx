@@ -13,6 +13,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         },
         defaultChain: monadTestnet,
         supportedChains: [monadTestnet],
+        appearance: {
+          logo: "/sword-cursor.cur",
+          landingHeader: "Moninja",
+          loginMessage: "Slash Monanimals!",
+        },
       }}
     >
       {children}

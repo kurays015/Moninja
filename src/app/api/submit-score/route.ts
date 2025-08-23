@@ -2,31 +2,32 @@ import { NextResponse } from "next/server";
 import { createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { monadTestnet } from "viem/chains";
+import jwt from "jsonwebtoken";
+import { SessionData } from "@/src/types";
+import { CONTRACT_ABI } from "@/src/utils/abi";
 
-// Mock ABI for the updatePlayerData function
-const CONTRACT_ABI = [
-  {
-    inputs: [
-      { name: "player", type: "address" },
-      { name: "scoreAmount", type: "uint256" },
-      { name: "transactionAmount", type: "uint256" },
-    ],
-    name: "updatePlayerData",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-] as const;
+const privateKey = process.env.PRIVATE_KEY as `0x${string}`;
+const contractAddress = process.env.CONTRACT_ADDRESS as `0x${string}`;
+
+const account = privateKeyToAccount(privateKey);
+const walletClient = createWalletClient({
+  account,
+  chain: monadTestnet,
+  transport: http(),
+});
 
 export async function POST(request: Request) {
   try {
-    const { player, scoreAmount, transactionAmount } = await request.json();
+    const { player, scoreAmount, transactionAmount, timestamp, sessionId } =
+      await request.json();
 
-    // Validate input
+    // 1. VALIDATE INPUT
     if (
       !player ||
       typeof scoreAmount !== "number" ||
-      typeof transactionAmount !== "number"
+      typeof transactionAmount !== "number" ||
+      !timestamp ||
+      !sessionId
     ) {
       return NextResponse.json(
         { error: "Invalid input parameters" },
@@ -34,78 +35,144 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get private key from environment
-    const privateKey = process.env.PRIVATE_KEY as `0x${string}`;
-
-    if (!privateKey) {
+    // Validate score and transaction amounts are positive
+    if (scoreAmount <= 0 || transactionAmount <= 0) {
       return NextResponse.json(
-        { error: "Private key not configured" },
+        { error: "Score and transaction amounts must be positive" },
+        { status: 400 }
+      );
+    }
+
+    // Validate timestamp is recent (within 5 minutes)
+    const now = Date.now();
+    const timestampAge = now - timestamp;
+    if (timestampAge > 300000 || timestampAge < 0) {
+      return NextResponse.json(
+        { error: "Invalid timestamp - must be within 5 minutes" },
+        { status: 400 }
+      );
+    }
+
+    // 2. VALIDATE SESSION TOKEN
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { error: "No valid session token provided" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7);
+    let sessionData: SessionData;
+    try {
+      sessionData = jwt.verify(token, process.env.JWT_SECRET!) as SessionData;
+      if (
+        sessionData.player !== player ||
+        sessionData.sessionId !== sessionId
+      ) {
+        throw new Error("Session mismatch");
+      }
+    } catch (err) {
+      console.error("JWT verification failed:", err);
+      return NextResponse.json(
+        { error: "Invalid or expired session" },
+        { status: 401 }
+      );
+    }
+
+    // 3. VALIDATE ENVIRONMENT VARIABLES
+    if (!process.env.PRIVATE_KEY || !process.env.CONTRACT_ADDRESS) {
+      console.error("Missing required environment variables");
+      return NextResponse.json(
+        { error: "Server configuration error" },
         { status: 500 }
       );
     }
 
-    // Create account from private key
-    const account = privateKeyToAccount(privateKey);
+    // 6. BLOCKCHAIN TRANSACTION
+    try {
+      // Execute the blockchain transaction
+      const hash = await walletClient.writeContract({
+        address: contractAddress,
+        abi: CONTRACT_ABI,
+        functionName: "updatePlayerData",
+        args: [
+          player as `0x${string}`,
+          BigInt(scoreAmount),
+          BigInt(transactionAmount),
+        ],
+      });
 
-    // Create wallet client
-    const walletClient = createWalletClient({
-      account,
-      chain: monadTestnet,
-      transport: http(),
-    });
+      console.log("Successfully processed score submission:", {
+        player,
+        scoreAmount,
+        transactionAmount,
+        transactionHash: hash,
+        timestamp: now,
+        sessionId,
+      });
 
-    // Prepare contract write
-    const hash = await walletClient.writeContract({
-      address: process.env.CONTRACT_ADDRESS as `0x${string}`,
-      abi: CONTRACT_ABI,
-      functionName: "updatePlayerData",
-      args: [
-        player as `0x${string}`,
-        BigInt(scoreAmount),
-        BigInt(transactionAmount),
-      ],
-    });
+      return NextResponse.json({
+        success: true,
+        transactionHash: hash,
+        player,
+        scoreAmount,
+        transactionAmount,
+        timestamp: now,
+      });
+    } catch (blockchainError: unknown) {
+      console.error("Blockchain transaction failed:", blockchainError);
 
-    console.log("Transaction submitted:", hash);
+      if (blockchainError instanceof Error) {
+        const errorMessage = blockchainError.message.toLowerCase();
 
-    return NextResponse.json({
-      success: true,
-      transactionHash: hash,
-      player,
-      scoreAmount,
-      transactionAmount,
-    });
-  } catch (error) {
-    console.error("Error updating player data:", error);
+        if (errorMessage.includes("insufficient funds")) {
+          return NextResponse.json(
+            { error: "Insufficient funds to complete transaction" },
+            { status: 400 }
+          );
+        }
 
-    // Handle specific viem errors
-    if (error instanceof Error) {
-      if (error.message.includes("insufficient funds")) {
-        return NextResponse.json(
-          { error: "Insufficient funds to complete transaction" },
-          { status: 400 }
-        );
+        if (errorMessage.includes("execution reverted")) {
+          return NextResponse.json(
+            {
+              error:
+                "Contract execution failed - check if wallet has GAME_ROLE permission",
+            },
+            { status: 400 }
+          );
+        }
+
+        if (errorMessage.includes("nonce")) {
+          return NextResponse.json(
+            { error: "Transaction nonce error - please try again" },
+            { status: 429 }
+          );
+        }
+
+        if (errorMessage.includes("gas")) {
+          return NextResponse.json(
+            { error: "Gas estimation failed - check contract parameters" },
+            { status: 400 }
+          );
+        }
       }
-      if (error.message.includes("execution reverted")) {
-        return NextResponse.json(
-          {
-            error:
-              "Contract execution failed - check if wallet has GAME_ROLE permission",
-          },
-          { status: 400 }
-        );
-      }
-      if (error.message.includes("AccessControlUnauthorizedAccount")) {
-        return NextResponse.json(
-          { error: "Unauthorized: Wallet does not have GAME_ROLE permission" },
-          { status: 403 }
-        );
-      }
+
+      return NextResponse.json(
+        { error: "Blockchain transaction failed" },
+        { status: 500 }
+      );
     }
+  } catch (error: unknown) {
+    console.error("Unexpected error in submit-score endpoint:", error);
 
-    return NextResponse.json(
-      { error: "Failed to update player data" },
-      { status: 500 }
-    );
+    // Don't expose internal error details in production
+    const isDevelopment = process.env.NODE_ENV === "development";
+    const errorMessage =
+      isDevelopment && error instanceof Error
+        ? error.message
+        : "Failed to process score submission";
+
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
