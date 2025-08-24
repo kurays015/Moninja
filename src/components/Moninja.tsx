@@ -31,7 +31,10 @@ import SlashTrail from "./SlashTrail";
 import { usePlayerTotalScore } from "../hooks/usePlayerTotalScore";
 import { usePrivy } from "@privy-io/react-auth";
 import { useUsername } from "../hooks/useUsername";
+import { useGameSession } from "../hooks/useGameSession";
 import PauseButton from "./PauseButton";
+import { toast } from "react-toastify";
+import TransactionToast from "./TransactionToast";
 
 export default function Moninja() {
   const [score, setScore] = useState<number>(0);
@@ -74,10 +77,17 @@ export default function Moninja() {
   //hooks
   const { logout } = usePrivy();
   const { walletAddress } = useCrossAppAccount();
+
   const { preloadSound, playSound, stopBombSound, cleanupAll } =
     useAudioManager();
-  const { refetch, score: totalScore } = usePlayerTotalScore(walletAddress);
-  const { username, isLoading: isLoadingUsername } = useUsername(walletAddress);
+  const { refetch, data: playerScoreData } = usePlayerTotalScore(walletAddress);
+  const {
+    data: usernameData,
+    isLoading: isLoadingUserName,
+    refetch: refetchUserName,
+  } = useUsername(walletAddress);
+  const { startGameSession, endGameSession, submitScore } =
+    useGameSession(gameSessionToken);
 
   // Memoized constants
   const monanimalImages = useMemo(
@@ -515,46 +525,52 @@ export default function Moninja() {
 
       setIsSubmitting(true);
 
-      try {
-        const res = await fetch("/api/submit-score", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${gameSessionToken}`, // Add session token
+      submitScore.mutate(
+        {
+          player: walletAddress!,
+          transactionAmount: 1,
+          scoreAmount: scoreDifference,
+          timestamp: Date.now(),
+          sessionId: gameSessionId!,
+        },
+        {
+          onSuccess: data => {
+            setSubmittedScore(scoreToSubmit);
+            toast(<TransactionToast transactionsInfo={data} />, {
+              autoClose: 4000,
+              closeOnClick: false,
+              pauseOnHover: true,
+              draggable: false,
+              style: {
+                background: "rgba(17, 24, 39, 0.95)",
+                border: "1px solid rgba(59, 130, 246, 0.2)",
+                borderRadius: "8px",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                padding: "0",
+                margin: "0",
+              },
+            });
+            console.log("Score batch submitted:", {
+              scoreDifference,
+              transactionHash: data.transactionHash,
+              totalScore: scoreToSubmit,
+            });
+            setIsSubmitting(false);
           },
-          body: JSON.stringify({
-            player: walletAddress,
-            transactionAmount: 1,
-            scoreAmount: scoreDifference,
-            timestamp: Date.now(),
-            sessionId: gameSessionId,
-          }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setSubmittedScore(scoreToSubmit);
-          console.log("Score batch submitted:", {
-            scoreDifference,
-            transactionHash: data.transactionHash,
-            totalScore: scoreToSubmit,
-          });
-        } else {
-          console.error("Failed to submit score:", res.statusText);
+          onError: error => {
+            console.error("Error submitting score batch:", error);
+            setIsSubmitting(false);
+          },
         }
-      } catch (error) {
-        console.error("Error submitting score batch:", error);
-      } finally {
-        setIsSubmitting(false);
-      }
+      );
     },
     [
       localScore,
       submittedScore,
       walletAddress,
       isSubmitting,
-      gameSessionToken,
       gameSessionId,
+      submitScore,
     ]
   );
 
@@ -587,33 +603,27 @@ export default function Moninja() {
     setGameEnded(true);
 
     // End game session when game ends
-    const endGameSession = async () => {
-      if (gameSessionId) {
-        try {
-          await fetch("/api/end-game-session", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${gameSessionToken}`,
-            },
-            body: JSON.stringify({
-              sessionId: gameSessionId,
-            }),
-          });
-        } catch (error) {
-          console.error("Error ending game session:", error);
-        } finally {
-          setGameSessionToken(null);
-          setGameSessionId(null);
+    if (gameSessionId) {
+      endGameSession.mutate(
+        { sessionId: gameSessionId },
+        {
+          onSuccess: () => {
+            setGameSessionToken(null);
+            setGameSessionId(null);
+          },
+          onError: error => {
+            console.error("Error ending game session:", error);
+            setGameSessionToken(null);
+            setGameSessionId(null);
+          },
         }
-      }
-    };
+      );
+    }
 
     if (submitTimeoutRef.current) {
       clearTimeout(submitTimeoutRef.current);
     }
     submitScoreBatch(localScore);
-    await endGameSession(); // Clean up session
 
     // Refresh the score after game ends
     refetch();
@@ -621,14 +631,20 @@ export default function Moninja() {
     localScore,
     submitScoreBatch,
     gameSessionId,
-    gameSessionToken,
     gameEnded,
     refetch,
+    endGameSession,
   ]);
 
   // Optimized collision detection with immediate sound effects
   const checkSlashCollisions = useCallback((): void => {
-    if (slashPath.length < 2 || gamePaused || bombHit) return;
+    if (
+      slashPath.length < 2 ||
+      gamePaused ||
+      bombHit ||
+      !usernameData?.hasUsername
+    )
+      return;
 
     const currentTime = Date.now();
     const timeSinceLastSlice = currentTime - lastSliceTimeRef.current;
@@ -942,6 +958,7 @@ export default function Moninja() {
     stopBombSound,
     updateScore,
     playSound,
+    usernameData?.hasUsername,
   ]);
 
   useEffect(() => {
@@ -1076,10 +1093,10 @@ export default function Moninja() {
 
   // Spawn start button initially
   useEffect(() => {
-    if (!gameStarted && !startButton) {
+    if (!gameStarted && !startButton && usernameData?.hasUsername) {
       createStartButton();
     }
-  }, [gameStarted, startButton, createStartButton]);
+  }, [gameStarted, startButton, createStartButton, usernameData?.hasUsername]);
 
   // Add event listeners
   useEffect(() => {
@@ -1102,47 +1119,56 @@ export default function Moninja() {
   }, [handleMouseDown, handleMouseMove, handleMouseUp]);
 
   // Initialize game session when component mounts or game starts
-  // Update the useEffect that initializes game session
   useEffect(() => {
-    const startGameSession = async () => {
-      try {
-        const res = await fetch("/api/start-game-session", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            walletAddress,
-            timestamp: Date.now(),
-          }),
-        });
-
-        if (res.ok) {
-          const { sessionToken, sessionId } = await res.json();
-          setGameSessionToken(sessionToken);
-          setGameSessionId(sessionId);
-          console.log("Game session started:", sessionId);
-          return { sessionToken, sessionId };
-        }
-        throw new Error("Failed to start game session");
-      } catch (error) {
-        console.error("Error starting game session:", error);
-        throw error;
-      }
-    };
-
     // Add gameOver check to prevent starting session after bomb hit
     if (
       gameStarted &&
       !gameSessionId &&
       walletAddress &&
       !gameOver &&
-      !bombHit
+      !bombHit &&
+      !startGameSession.isPending
     ) {
-      startGameSession();
+      startGameSession.mutate(
+        {
+          timestamp: Date.now(),
+          walletAddress: walletAddress!,
+        },
+        {
+          onSuccess: data => {
+            console.log("suck", data);
+            setGameSessionToken(data.sessionToken);
+            setGameSessionId(data.sessionId);
+            console.log("Game session started:", data.sessionId);
+          },
+          onError: error => {
+            console.error("Error starting game session:", error);
+          },
+        }
+      );
     }
-  }, [walletAddress, gameSessionId, gameStarted, gameOver, bombHit]);
+  }, [
+    walletAddress,
+    gameSessionId,
+    gameStarted,
+    gameOver,
+    bombHit,
+    startGameSession, // Use isPending instead of the mutation object
+  ]);
 
+  useEffect(() => {
+    // Only refetch if we have a wallet address but no username yet
+    if (!walletAddress || usernameData?.hasUsername) return;
+
+    // Refetch every 5 seconds until username is found
+    const interval = setInterval(() => {
+      console.log("Refetching username for wallet:", walletAddress);
+      refetchUserName();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [refetchUserName, usernameData?.hasUsername, walletAddress]);
+  console.log(usernameData);
   // Reset game function
   const resetGame = useCallback((): void => {
     setScore(0);
@@ -1187,6 +1213,8 @@ export default function Moninja() {
       setGamePaused(prev => !prev);
     }
   }, [gameStarted, gameOver, bombHit]);
+
+  console.log(walletAddress, "Wallet Address");
 
   return (
     <div
@@ -1253,15 +1281,16 @@ export default function Moninja() {
 
               {/* Player Info - Compact */}
               <div className="text-center space-y-1">
-                {isLoadingUsername ? (
+                {isLoadingUserName ? (
                   <div className="flex items-center justify-center gap-1 text-white/70">
                     <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span className="text-xs">Loading...</span>
+                    <span className="text-xs">Fetching username...</span>
                   </div>
-                ) : username ? (
+                ) : usernameData?.hasUsername &&
+                  usernameData?.user?.username ? (
                   <div className="space-y-1">
                     <h3 className="text-sm font-bold text-white">
-                      @{username}
+                      @{usernameData.user.username}
                     </h3>
                     <p className="text-xs text-white/50 font-mono">
                       {walletAddress.slice(0, 6)}...
@@ -1271,7 +1300,7 @@ export default function Moninja() {
                 ) : (
                   <div className="space-y-1">
                     <p className="text-yellow-400 text-xs font-medium">
-                      Anonymous Ninja
+                      Please create a username to play
                     </p>
                     <Link
                       href="https://monad-games-id-site.vercel.app"
@@ -1289,7 +1318,7 @@ export default function Moninja() {
               <div className="border-t border-white/10 pt-2">
                 <div className="text-center">
                   <div className="text-lg font-bold text-white">
-                    {totalScore}
+                    {playerScoreData?.totalScore || 0}
                   </div>
                   <div className="text-xs text-white/60">Total Score</div>
                 </div>
@@ -1339,33 +1368,30 @@ export default function Moninja() {
       />
 
       {/* Start Button */}
-      {!walletAddress ? (
-        <div className="absolute z-40 select-none top-[55%] left-1/2 -translate-x-1/2 -translate-y-1/2">
-          <Link
-            href="https://monad-games-id-site.vercel.app"
-            className="text-yellow-400 hover:text-yellow-300 underline"
-            target="_blank"
-            referrerPolicy="no-referrer"
-          >
-            Create Username →
-          </Link>
+      {usernameData?.hasUsername &&
+      !gameStarted &&
+      startButton &&
+      !startButton.sliced ? (
+        <div className="h-screen flex flex-col items-center justify-center gap-4 z-40 select-none">
+          <Image
+            src="/Watermelon.svg"
+            alt="start-watermelon"
+            width={160}
+            height={160}
+            className="w-40 h-40 object-contain animate-spin [animation-duration:8s]"
+            draggable={false}
+          />
+          <p className="text-center font-semibold italic text-3xl">
+            Slash to start!
+          </p>
         </div>
       ) : (
-        !gameStarted &&
-        startButton &&
-        !startButton.sliced && (
-          <div className="h-screen flex flex-col items-center justify-center gap-4 z-40 select-none">
-            <Image
-              src="/Watermelon.svg"
-              alt="start-watermelon"
-              width={160}
-              height={160}
-              className="w-40 h-40 object-contain animate-spin [animation-duration:8s]"
-              draggable={false}
-            />
-            <p className="text-center font-semibold italic text-3xl">
-              Slash to start!
-            </p>
+        isLoadingUserName && (
+          <div className="absolute z-40 select-none top-[55%] left-1/2 -translate-x-1/2 -translate-y-1/2">
+            <div className="flex items-center justify-center gap-1 text-white/70">
+              <div className="w-6 h-6 border border-white/30 border-t-white rounded-full animate-spin"></div>
+              <span className="text-xl">Fetching username...</span>
+            </div>
           </div>
         )
       )}

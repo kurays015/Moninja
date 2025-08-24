@@ -14,12 +14,31 @@ export default function MonadAuth() {
   const [previousVolume, setPreviousVolume] = useState(0.3); // Store previous volume for unmute
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
 
+  // Close volume slider when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (showVolumeSlider && !target.closest(".volume-controls")) {
+        setShowVolumeSlider(false);
+      }
+    };
+
+    if (showVolumeSlider) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showVolumeSlider]);
+
   // Initialize background music
   useEffect(() => {
     if (typeof window !== "undefined") {
       const audio = new Audio("/sounds/bg-music.mp3");
       audio.loop = true;
       audio.volume = volume;
+      audio.preload = "auto";
       setBgMusic(audio);
 
       // Cleanup on unmount
@@ -30,12 +49,13 @@ export default function MonadAuth() {
         }
       };
     }
-  }, [volume]);
+  }, [volume]); // Remove volume dependency to prevent re-initialization
 
   // Update music volume when volume state changes
   useEffect(() => {
     if (bgMusic) {
       bgMusic.volume = volume;
+      console.log("Volume updated:", volume, "bgMusic.volume:", bgMusic.volume);
     }
   }, [bgMusic, volume]);
 
@@ -86,15 +106,28 @@ export default function MonadAuth() {
 
   // Toggle mute/unmute
   const toggleMute = useCallback(() => {
-    if (volume > 0) {
-      // Mute: store current volume and set to 0
-      setPreviousVolume(volume);
-      setVolume(0);
-    } else {
-      // Unmute: restore previous volume
-      setVolume(previousVolume);
-    }
-  }, [volume, previousVolume]);
+    console.log(
+      "Toggle mute clicked. Current volume:",
+      volume,
+      "Previous volume:",
+      previousVolume
+    );
+    setVolume(currentVolume => {
+      if (currentVolume > 0) {
+        // Mute: store current volume and set to 0
+        setPreviousVolume(currentVolume);
+        console.log(
+          "Muting: setting volume to 0, storing previous volume:",
+          currentVolume
+        );
+        return 0;
+      } else {
+        // Unmute: restore previous volume
+        console.log("Unmuting: restoring volume to:", previousVolume);
+        return previousVolume;
+      }
+    });
+  }, [previousVolume, volume]);
 
   // Memoized button handlers
   const handleLogin = useCallback(() => {
@@ -195,7 +228,7 @@ export default function MonadAuth() {
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Music Controls Overlay */}
-      <div className="absolute bottom-4 left-4 z-50">
+      <div className="absolute bottom-4 left-4 z-50 volume-controls">
         <div className="bg-black/40 backdrop-blur-sm rounded-xl border border-white/20 shadow-lg p-3">
           <div className="flex items-center gap-3">
             {/* Volume Control */}
@@ -222,19 +255,19 @@ export default function MonadAuth() {
 
               {/* Volume Slider */}
               {showVolumeSlider && (
-                <div className="absolute left-0 bottom-12 bg-black/60 backdrop-blur-sm rounded-lg border border-white/20 shadow-lg p-3 mb-2">
+                <div className="absolute left-0 bottom-12 bg-black/60 backdrop-blur-sm rounded-lg border border-white/20 shadow-lg p-3 mb-2 min-w-[200px]">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-white/70">🔈</span>
                     <input
                       type="range"
                       min="0"
                       max="1"
-                      step="0.1"
+                      step="0.01"
                       value={volume}
                       onChange={e =>
                         handleVolumeChange(parseFloat(e.target.value))
                       }
-                      className="flex-1 h-2 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
+                      className="flex-1 h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
                       style={{
                         background: `linear-gradient(to right, #10b981 0%, #10b981 ${
                           volume * 100

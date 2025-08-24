@@ -78,3 +78,34 @@ export interface SessionData {
   startTime: number;
   iat: number;
 }
+
+export interface StartGameSessionRequest {
+  walletAddress: string;
+  timestamp: number;
+}
+
+export interface StartGameSessionResponse {
+  sessionToken: string;
+  sessionId: string;
+}
+
+export interface EndGameSessionRequest {
+  sessionId: string;
+}
+
+export interface SubmitScoreRequest {
+  player: string;
+  transactionAmount: number;
+  scoreAmount: number;
+  timestamp: number;
+  sessionId: string;
+}
+
+export interface SubmitScoreResponse {
+  success: true;
+  transactionHash: string;
+  player: `0x${string}`;
+  scoreAmount: number;
+  transactionAmount: number;
+  timestamp: Date;
+}

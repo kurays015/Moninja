@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     // 2. VALIDATE REQUEST BODY
     const body = await request.json();
-    const { sessionId, finalScore, totalTransactions } = body;
+    const { sessionId } = body;
 
     if (!sessionId) {
       return NextResponse.json(
@@ -97,15 +97,6 @@ export async function POST(request: NextRequest) {
       startTime: sessionData.startTime,
     };
 
-    // Update final stats if provided in request
-    if (typeof finalScore === "number") {
-      currentStats.totalScore = finalScore;
-    }
-    if (typeof totalTransactions === "number") {
-      currentStats.totalTransactions = totalTransactions;
-    }
-    currentStats.endTime = endTime;
-
     // 7. SESSION CLEANUP
     try {
       // Remove from active sessions
@@ -150,17 +141,6 @@ export async function POST(request: NextRequest) {
           durationMs: sessionDuration,
           startTime: sessionData.startTime,
           endTime,
-          statistics: {
-            totalScore: currentStats.totalScore,
-            totalTransactions: currentStats.totalTransactions,
-            submissionCount: currentStats.submissionCount,
-            averageScorePerSubmission:
-              currentStats.submissionCount > 0
-                ? Math.round(
-                    currentStats.totalScore / currentStats.submissionCount
-                  )
-                : 0,
-          },
         },
       },
       { status: 200 }

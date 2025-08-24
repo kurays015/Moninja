@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Moninja Game
+
+A fun fruit-slicing game built with Next.js, React, and TanStack Query.
+
+## Features
+
+- **TanStack Query Integration**: Modern data fetching with automatic caching, background updates, and error handling
+- **Axios API Client**: Centralized API management with interceptors and type safety
+- **Real-time Gameplay**: Smooth animations and responsive controls
+- **Score Tracking**: Persistent score system with blockchain integration
+- **Authentication**: Privy wallet integration for secure gameplay
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Data Fetching**: TanStack Query v5 with Axios
+- **Authentication**: Privy
+- **Styling**: Tailwind CSS
+- **Audio**: Custom audio manager with Web Audio API
+
+## API Integration
+
+The game uses TanStack Query for all data operations:
+
+### Hooks
+
+- `useUsername`: Fetches and caches player username
+- `usePlayerTotalScore`: Manages player's total score across sessions
+- `useGameSession`: Handles game session lifecycle (start, end, score submission)
+
+### Features
+
+- **Automatic Caching**: Queries are cached for 5 minutes with 10-minute garbage collection
+- **Background Updates**: Data refreshes automatically when needed
+- **Error Handling**: Built-in retry logic and error states
+- **Optimistic Updates**: Immediate UI updates with background sync
+- **Query Invalidation**: Automatic cache invalidation when data changes
+
+### Configuration
+
+- **Stale Time**: 5 minutes (data considered fresh)
+- **GC Time**: 10 minutes (how long to keep unused data)
+- **Retry**: 1 attempt on failure
+- **Refetch on Focus**: Disabled for better UX
 
 ## Getting Started
 
-First, run the development server:
+1. Install dependencies:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+   ```bash
+   npm install
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Set up environment variables:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+   ```env
+   NEXT_PUBLIC_PRIVY_APP_ID=your_privy_app_id
+   NEXT_PUBLIC_MON_ID=your_mon_id
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-## Learn More
+## Game Mechanics
 
-To learn more about Next.js, take a look at the following resources:
+- Slash fruits to earn points
+- Avoid bombs - they end the game
+- Special monad objects require multiple slashes
+- Frenzy mode activates at score milestones
+- Combo system for multiple simultaneous hits
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Performance Features
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Query Deduplication**: Multiple components can use the same data without duplicate requests
+- **Background Refetching**: Data stays fresh without blocking the UI
+- **Smart Caching**: Only fetches data when needed
+- **Optimistic Updates**: Immediate feedback for better user experience
