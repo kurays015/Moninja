@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { api, apiEndpoints } from "../lib/api";
 
 interface UsernameResponse {
@@ -12,7 +13,7 @@ interface UsernameResponse {
 }
 
 export function useUsername(walletAddress: string | null) {
-  return useQuery({
+  const query = useQuery({
     queryKey: ["username", walletAddress],
     queryFn: async (): Promise<UsernameResponse> => {
       if (!walletAddress) {
@@ -28,9 +29,20 @@ export function useUsername(walletAddress: string | null) {
 
       return data;
     },
+    staleTime: Infinity,
     enabled: !!walletAddress,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 10, // 10 minutes
-    retry: 1,
+    refetchInterval: false,
   });
+
+  // Stop refetching when username is found
+  useEffect(() => {
+    if (query.data?.hasUsername && query.data?.user?.username) {
+      console.log(
+        "Username found, disabling refetch interval:",
+        query.data.user.username
+      );
+    }
+  }, [query.data]);
+
+  return query;
 }

@@ -7,7 +7,13 @@ interface PlayerScoreResponse {
   totalScore: number;
 }
 
-export function usePlayerTotalScore(walletAddress: string | null) {
+export function usePlayerTotalScore(
+  walletAddress: string | null,
+  gameStarted: boolean,
+  gameOver: boolean
+) {
+  const shouldRefetch = gameStarted && !gameOver;
+
   return useQuery({
     queryKey: ["playerTotalScore", walletAddress],
     queryFn: async (): Promise<PlayerScoreResponse> => {
@@ -25,8 +31,10 @@ export function usePlayerTotalScore(walletAddress: string | null) {
       return data;
     },
     enabled: !!walletAddress,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 10, // 10 minutes
-    retry: 1,
+    staleTime: 0,
+    gcTime: 1000 * 60 * 10,
+    retry: 20,
+    refetchInterval: shouldRefetch ? 5000 : false,
+    refetchIntervalInBackground: shouldRefetch,
   });
 }

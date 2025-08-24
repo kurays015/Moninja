@@ -75,17 +75,18 @@ export default function Moninja() {
   const frenzyWaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   //hooks
-  const { logout } = usePrivy();
+  const { logout, user } = usePrivy();
   const { walletAddress } = useCrossAppAccount();
-
+  console.log(user);
   const { preloadSound, playSound, stopBombSound, cleanupAll } =
     useAudioManager();
-  const { refetch, data: playerScoreData } = usePlayerTotalScore(walletAddress);
-  const {
-    data: usernameData,
-    isLoading: isLoadingUserName,
-    refetch: refetchUserName,
-  } = useUsername(walletAddress);
+  const { data: playerScoreData } = usePlayerTotalScore(
+    walletAddress,
+    gameStarted,
+    gameOver
+  );
+  const { data: usernameData, isLoading: isLoadingUserName } =
+    useUsername(walletAddress);
   const { startGameSession, endGameSession, submitScore } =
     useGameSession(gameSessionToken);
 
@@ -157,16 +158,6 @@ export default function Moninja() {
       window.removeEventListener("focus", handleWindowFocus);
     };
   }, [gameStarted, gameOver]);
-
-  useEffect(() => {
-    if (!walletAddress || !gameStarted || gameOver) return;
-
-    const interval = setInterval(() => {
-      refetch();
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, [refetch, gameStarted, walletAddress, gameOver]);
 
   // Create start button
   const createStartButton = useCallback((): void => {
@@ -624,17 +615,7 @@ export default function Moninja() {
       clearTimeout(submitTimeoutRef.current);
     }
     submitScoreBatch(localScore);
-
-    // Refresh the score after game ends
-    refetch();
-  }, [
-    localScore,
-    submitScoreBatch,
-    gameSessionId,
-    gameEnded,
-    refetch,
-    endGameSession,
-  ]);
+  }, [localScore, submitScoreBatch, gameSessionId, gameEnded, endGameSession]);
 
   // Optimized collision detection with immediate sound effects
   const checkSlashCollisions = useCallback((): void => {
@@ -1156,19 +1137,6 @@ export default function Moninja() {
     startGameSession, // Use isPending instead of the mutation object
   ]);
 
-  useEffect(() => {
-    // Only refetch if we have a wallet address but no username yet
-    if (!walletAddress || usernameData?.hasUsername) return;
-
-    // Refetch every 5 seconds until username is found
-    const interval = setInterval(() => {
-      console.log("Refetching username for wallet:", walletAddress);
-      refetchUserName();
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [refetchUserName, usernameData?.hasUsername, walletAddress]);
-  console.log(usernameData);
   // Reset game function
   const resetGame = useCallback((): void => {
     setScore(0);
@@ -1245,13 +1213,13 @@ export default function Moninja() {
         onTogglePause={() => togglePause()}
       />
 
-      {/* Minimal Game UI Overlay */}
+      {/* User Profile Overlay */}
       <div className="absolute top-4 right-4 z-50">
-        <div className="bg-black/40 backdrop-blur-sm rounded-xl border border-white/20 shadow-lg p-3 min-w-[200px]">
-          {walletAddress ? (
-            // Success state - Compact Player Profile
-            <div className="space-y-2">
-              {/* Header with logout */}
+        <div className="bg-black/40 backdrop-blur-sm rounded-xl border border-white/20 shadow-lg p-4 min-w-[240px]">
+          {usernameData?.hasUsername ? (
+            // User has username - show profile
+            <div className="space-y-3">
+              {/* Header with connection status */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -1261,10 +1229,11 @@ export default function Moninja() {
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer"
+                  className="p-1.5 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+                  title="Disconnect"
                 >
                   <svg
-                    className="w-5 h-5 text-white/70"
+                    className="w-4 h-4 text-white/70"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -1279,68 +1248,90 @@ export default function Moninja() {
                 </button>
               </div>
 
-              {/* Player Info - Compact */}
+              {/* User info */}
               <div className="text-center space-y-1">
                 {isLoadingUserName ? (
-                  <div className="flex items-center justify-center gap-1 text-white/70">
+                  <div className="flex items-center justify-center gap-2 text-white/70">
                     <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span className="text-xs">Fetching username...</span>
+                    <span className="text-xs">Loading profile...</span>
                   </div>
-                ) : usernameData?.hasUsername &&
-                  usernameData?.user?.username ? (
+                ) : usernameData?.user?.username ? (
                   <div className="space-y-1">
                     <h3 className="text-sm font-bold text-white">
                       @{usernameData.user.username}
                     </h3>
                     <p className="text-xs text-white/50 font-mono">
-                      {walletAddress.slice(0, 6)}...
-                      {walletAddress.slice(-4)}
+                      {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-1">
                     <p className="text-yellow-400 text-xs font-medium">
-                      Please create a username to play
+                      Anonymous Ninja
                     </p>
-                    <Link
-                      href="https://monad-games-id-site.vercel.app"
-                      className="text-yellow-400 hover:text-yellow-300 underline text-xs"
-                      target="_blank"
-                      referrerPolicy="no-referrer"
-                    >
-                      Create Username →
-                    </Link>
+                    <p className="text-xs text-white/50">
+                      Create username to save progress
+                    </p>
                   </div>
                 )}
               </div>
 
-              {/* Compact Stats */}
-              <div className="border-t border-white/10 pt-2">
+              {/* Stats */}
+              <div className="border-t border-white/10 pt-3">
                 <div className="text-center">
                   <div className="text-lg font-bold text-white">
                     {playerScoreData?.totalScore || 0}
                   </div>
                   <div className="text-xs text-white/60">Total Score</div>
                 </div>
-                <div className="text-center mt-2">
-                  <div className="text-lg font-bold text-yellow-400">-</div>
-                  <div className="text-xs text-white/60">Rank</div>
-                </div>
               </div>
             </div>
           ) : (
-            <div className="space-y-1">
-              <p className="text-yellow-400 text-xs font-medium">
-                Please create a username to play
-              </p>
+            // No username - minimal prompt
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></div>
+              </div>
               <Link
                 href="https://monad-games-id-site.vercel.app"
-                className="text-yellow-400 hover:text-yellow-300 underline text-xs"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-400/30 rounded-lg text-yellow-300 hover:text-yellow-200 transition-all duration-200 text-xs font-medium"
                 target="_blank"
                 referrerPolicy="no-referrer"
               >
-                Create Username →
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                  />
+                </svg>
+                Create a username to play
               </Link>
+              <button
+                onClick={handleLogout}
+                className="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer"
+                title="Disconnect"
+              >
+                <svg
+                  className="w-5 h-5 text-white/70"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+              </button>
             </div>
           )}
         </div>
