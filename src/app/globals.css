@@ -18,6 +18,9 @@
     --foreground: #ededed;
   }
 }
+* {
+  cursor: url("/sword-cursor.cur") 16 16, auto !important;
+}
 
 body {
   background: var(--background);
@@ -27,7 +30,6 @@ body {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
-  cursor: url("/sword-cursor.cur") 16 16, auto !important;
 }
 
 /* Ensure wood background is visible */
@@ -530,4 +532,56 @@ input[type="range"]::-moz-range-thumb:hover {
 /* Game area cursor */
 .game-area {
   cursor: url("/sword-cursor.cur"), auto;
+}
+
+/* Custom CSS for wood-themed scrollbar */
+
+.wood-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #8b4513 #d2b48c;
+}
+
+.wood-scrollbar::-webkit-scrollbar {
+  width: 12px;
+}
+
+.wood-scrollbar::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, #d2b48c 0%, #deb887 50%, #d2b48c 100%);
+  border-radius: 6px;
+  border: 1px solid #cd853f;
+  box-shadow: inset 0 2px 4px rgba(139, 69, 19, 0.2);
+}
+
+.wood-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    #8b4513 0%,
+    #a0522d 30%,
+    #8b4513 70%,
+    #654321 100%
+  );
+  border-radius: 6px;
+  border: 1px solid #654321;
+  box-shadow: inset 0 1px 0 rgba(210, 180, 140, 0.3),
+    inset 0 -1px 0 rgba(101, 67, 33, 0.8), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.wood-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    #a0522d 0%,
+    #8b4513 30%,
+    #654321 70%,
+    #5d4e37 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(210, 180, 140, 0.4),
+    inset 0 -1px 0 rgba(101, 67, 33, 0.9), 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+.wood-scrollbar::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #654321 0%, #8b4513 50%, #5d4e37 100%);
+}
+
+.wood-scrollbar::-webkit-scrollbar-corner {
+  background: #d2b48c;
 }

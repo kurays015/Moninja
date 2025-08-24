@@ -75,9 +75,8 @@ export default function Moninja() {
   const frenzyWaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   //hooks
-  const { logout, user } = usePrivy();
+  const { logout } = usePrivy();
   const { walletAddress } = useCrossAppAccount();
-  console.log(user);
   const { preloadSound, playSound, stopBombSound, cleanupAll } =
     useAudioManager();
   const { data: playerScoreData } = usePlayerTotalScore(
@@ -1179,8 +1178,6 @@ export default function Moninja() {
       setGamePaused(prev => !prev);
     }
   }, [gameStarted, gameOver, bombHit]);
-
-  console.log(walletAddress, "Wallet Address");
 
   return (
     <div
