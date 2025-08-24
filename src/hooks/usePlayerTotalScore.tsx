@@ -32,7 +32,7 @@ export function usePlayerTotalScore(
     },
     enabled: !!walletAddress,
     staleTime: 0,
-    gcTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 2,
     retry: 20,
     refetchInterval: shouldRefetch ? 5000 : false,
     refetchIntervalInBackground: shouldRefetch,

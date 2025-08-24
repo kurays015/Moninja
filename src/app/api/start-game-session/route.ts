@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 
 export async function POST(request: Request) {
   try {
-    const { walletAddress, timestamp } = await request.json();
+    const { walletAddress } = await request.json();
 
     if (!walletAddress) {
       return NextResponse.json(
@@ -19,7 +19,6 @@ export async function POST(request: Request) {
       {
         player: walletAddress,
         sessionId,
-        startTime: timestamp,
         iat: Math.floor(Date.now() / 1000),
       },
       process.env.JWT_SECRET!,

@@ -81,7 +81,6 @@ export interface SessionData {
 
 export interface StartGameSessionRequest {
   walletAddress: string;
-  timestamp: number;
 }
 
 export interface StartGameSessionResponse {
@@ -97,7 +96,6 @@ export interface SubmitScoreRequest {
   player: string;
   transactionAmount: number;
   scoreAmount: number;
-  timestamp: number;
   sessionId: string;
 }
 
@@ -107,5 +105,4 @@ export interface SubmitScoreResponse {
   player: `0x${string}`;
   scoreAmount: number;
   transactionAmount: number;
-  timestamp: Date;
 }

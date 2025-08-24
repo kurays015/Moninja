@@ -521,7 +521,6 @@ export default function Moninja() {
           player: walletAddress!,
           transactionAmount: 1,
           scoreAmount: scoreDifference,
-          timestamp: Date.now(),
           sessionId: gameSessionId!,
         },
         {
@@ -1112,7 +1111,6 @@ export default function Moninja() {
     ) {
       startGameSession.mutate(
         {
-          timestamp: Date.now(),
           walletAddress: walletAddress!,
         },
         {

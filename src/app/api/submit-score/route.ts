@@ -18,7 +18,7 @@ const walletClient = createWalletClient({
 
 export async function POST(request: Request) {
   try {
-    const { player, scoreAmount, transactionAmount, timestamp, sessionId } =
+    const { player, scoreAmount, transactionAmount, sessionId } =
       await request.json();
 
     // 1. VALIDATE INPUT
@@ -26,7 +26,6 @@ export async function POST(request: Request) {
       !player ||
       typeof scoreAmount !== "number" ||
       typeof transactionAmount !== "number" ||
-      !timestamp ||
       !sessionId
     ) {
       return NextResponse.json(
@@ -39,16 +38,6 @@ export async function POST(request: Request) {
     if (scoreAmount <= 0 || transactionAmount <= 0) {
       return NextResponse.json(
         { error: "Score and transaction amounts must be positive" },
-        { status: 400 }
-      );
-    }
-
-    // Validate timestamp is recent (within 5 minutes)
-    const now = Date.now();
-    const timestampAge = now - timestamp;
-    if (timestampAge > 300000 || timestampAge < 0) {
-      return NextResponse.json(
-        { error: "Invalid timestamp - must be within 5 minutes" },
         { status: 400 }
       );
     }
@@ -108,7 +97,6 @@ export async function POST(request: Request) {
         scoreAmount,
         transactionAmount,
         transactionHash: hash,
-        timestamp: now,
         sessionId,
       });
 
@@ -118,7 +106,6 @@ export async function POST(request: Request) {
         player,
         scoreAmount,
         transactionAmount,
-        timestamp: now,
       });
     } catch (blockchainError: unknown) {
       console.error("Blockchain transaction failed:", blockchainError);
