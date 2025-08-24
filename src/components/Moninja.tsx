@@ -1329,30 +1329,18 @@ export default function Moninja() {
               </div>
             </div>
           ) : (
-            // Error state - Compact
-            <div className="text-center space-y-2">
-              <div className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto">
-                <svg
-                  className="w-3 h-3 text-yellow-400"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <p className="text-yellow-400 text-xs">
+            <div className="space-y-1">
+              <p className="text-yellow-400 text-xs font-medium">
                 Please create a username to play
               </p>
-              <button
-                onClick={handleLogout}
-                className="w-full px-2 py-1 bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 transition-colors rounded text-red-300 text-xs font-medium"
+              <Link
+                href="https://monad-games-id-site.vercel.app"
+                className="text-yellow-400 hover:text-yellow-300 underline text-xs"
+                target="_blank"
+                referrerPolicy="no-referrer"
               >
-                Disconnect
-              </button>
+                Create Username →
+              </Link>
             </div>
           )}
         </div>
