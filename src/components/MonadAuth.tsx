@@ -228,7 +228,7 @@ export default function MonadAuth() {
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Music Controls Overlay */}
-      <div className="absolute bottom-4 left-4 volume-controls">
+      <div className="absolute bottom-4 left-4 volume-controls z-50">
         <div className="bg-black/40 backdrop-blur-sm rounded-xl border border-white/20 shadow-lg p-3">
           <div className="flex items-center gap-3">
             {/* Volume Control */}
