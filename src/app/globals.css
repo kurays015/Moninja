@@ -529,5 +529,5 @@ input[type="range"]::-moz-range-thumb:hover {
 
 /* Game area cursor */
 .game-area {
-  cursor: url('/sword-cursor.cur'), auto;
+  cursor: url("/sword-cursor.cur"), auto;
 }
