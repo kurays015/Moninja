@@ -3,6 +3,7 @@ import "./globals.css";
 import { Metadata } from "next";
 import Providers from "./providers";
 import { ToastContainer } from "react-toastify";
+import Kurays from "../components/Kurays";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +32,7 @@ export default function RootLayout({
       >
         <Providers>{children}</Providers>
         <ToastContainer position="bottom-right" />
+        <Kurays />
       </body>
     </html>
   );
