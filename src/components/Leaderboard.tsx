@@ -1,98 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Trophy, Medal, Award, User } from "lucide-react";
+import {
+  Trophy,
+  Medal,
+  Award,
+  User,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { useLeaderboard } from "../hooks/useLeaderboard";
 
 export default function Leaderboard() {
+  const [page, setPage] = useState(1);
   const [isLeaderboardVisible, setIsLeaderboardVisible] = useState(false);
-
-  // Dummy data - replace with your actual data later
-  const leaderboardData = [
-    {
-      rank: 1,
-      walletAddress: "0x742d...4B73",
-      username: "CryptoKing",
-      score: 15420,
-    },
-    {
-      rank: 2,
-      walletAddress: "0x8A5C...2D91",
-      username: "BlockMaster",
-      score: 14850,
-    },
-    {
-      rank: 3,
-      walletAddress: "0x1F3B...7E44",
-      username: "DegenLegend",
-      score: 13990,
-    },
-    {
-      rank: 4,
-      walletAddress: "0x9D2A...8C56",
-      username: "TokenHunter",
-      score: 12750,
-    },
-    {
-      rank: 5,
-      walletAddress: "0x4E7F...1A29",
-      username: "NFTCollector",
-      score: 11840,
-    },
-    {
-      rank: 6,
-      walletAddress: "0x6B8D...9F37",
-      username: "DeFiGuru",
-      score: 10920,
-    },
-    {
-      rank: 7,
-      walletAddress: "0x3A1C...5E82",
-      username: "YieldFarmer",
-      score: 9875,
-    },
-    {
-      rank: 8,
-      walletAddress: "0x7C4E...2B91",
-      username: "MetaTrader",
-      score: 8650,
-    },
-    {
-      rank: 9,
-      walletAddress: "0x6B8D...9F37",
-      username: "DeFiGuru",
-      score: 10920,
-    },
-    {
-      rank: 10,
-      walletAddress: "0x3A1C...5E82",
-      username: "YieldFarmer",
-      score: 9875,
-    },
-    {
-      rank: 11,
-      walletAddress: "0x7C4E...2B91",
-      username: "MetaTrader",
-      score: 8650,
-    },
-    {
-      rank: 12,
-      walletAddress: "0x7C4E...2B91",
-      username: "MetaTrader",
-      score: 8650,
-    },
-    {
-      rank: 13,
-      walletAddress: "0x7C4E...2B91",
-      username: "MetaTrader",
-      score: 8650,
-    },
-    {
-      rank: 14,
-      walletAddress: "0x7C4E...2B91",
-      username: "MetaTrader",
-      score: 8650,
-    },
-  ];
+  const { data: leaderBoardData, isLoading, isError } = useLeaderboard(page);
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -131,6 +53,20 @@ export default function Leaderboard() {
         return `${baseStyle} bg-amber-900/10 hover:bg-amber-800/20`;
     }
   };
+
+  const handlePrevPage = () => {
+    setPage(Math.max(1, page - 1));
+  };
+
+  const handleNextPage = () => {
+    const maxPages = leaderBoardData?.data?.pagination?.totalPages || 1;
+    setPage(Math.min(maxPages, page + 1));
+  };
+
+  const totalPages = leaderBoardData?.data?.pagination?.totalPages || 1;
+  const currentPage = leaderBoardData?.data?.pagination?.page || page;
+  const hasNextPage = currentPage < totalPages;
+  const hasPrevPage = currentPage > 1;
 
   return (
     <>
@@ -174,47 +110,105 @@ export default function Leaderboard() {
 
             {/* Leaderboard Content */}
             <div className="p-2 sm:p-3 overflow-y-auto flex-1 wood-scrollbar">
-              <div className="space-y-1.5 sm:space-y-2">
-                {leaderboardData.map((player, index) => (
-                  <div
-                    key={index}
+              {isLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-300"></div>
+                </div>
+              ) : isError ? (
+                <div className="flex items-center justify-center h-32 text-amber-200/80 text-sm">
+                  Failed to load leaderboard
+                </div>
+              ) : leaderBoardData?.data?.data &&
+                leaderBoardData.data.data.length > 0 ? (
+                <div className="space-y-1.5 sm:space-y-2">
+                  {leaderBoardData.data.data.map((player, index) => (
+                    <div
+                      key={`${player.walletAddress}-${index}`}
+                      className={`
+                        flex items-center justify-between p-2 sm:p-2.5 rounded-md transition-all duration-300 hover:-translate-y-0.5
+                        ${getRankStyle(player.rank)}
+                        ${index < 3 ? "shadow-lg" : "shadow-md hover:shadow-lg"}
+                      `}
+                    >
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+                        {/* Rank Icon */}
+                        <div className="flex-shrink-0">
+                          {getRankIcon(player.rank)}
+                        </div>
+
+                        {/* User Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <User className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-300/80 flex-shrink-0" />
+                            <h3 className="font-semibold text-amber-100 truncate text-xs sm:text-sm drop-shadow-md">
+                              {player.username}
+                            </h3>
+                          </div>
+                          <p className="text-xs text-amber-200/70 font-mono truncate">
+                            {player.walletAddress}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Score */}
+                      <div className="text-right flex-shrink-0 ml-1 sm:ml-2">
+                        <div className="text-sm sm:text-lg font-bold text-amber-100 drop-shadow-lg">
+                          {player.score.toLocaleString()}
+                        </div>
+                        <div className="text-xs text-amber-200/80 font-medium tracking-wide">
+                          POINTS
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-32 text-amber-200/80 text-sm">
+                  No leaderboard data available
+                </div>
+              )}
+            </div>
+
+            {/* Pagination Footer */}
+            <div className="flex-shrink-0 border-t border-amber-700/30 bg-gradient-to-r from-amber-800/40 to-amber-700/40 p-2 sm:p-3">
+              <div className="flex items-center justify-between">
+                {/* Page Info */}
+                <div className="text-xs text-amber-200/80 font-medium">
+                  Page {currentPage} of {totalPages}
+                </div>
+
+                {/* Pagination Controls */}
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <button
+                    onClick={handlePrevPage}
+                    disabled={!hasPrevPage || isLoading}
                     className={`
-                      flex items-center justify-between p-2 sm:p-2.5 rounded-md transition-all duration-300 hover:-translate-y-0.5
-                      ${getRankStyle(player.rank)}
-                      ${index < 3 ? "shadow-lg" : "shadow-md hover:shadow-lg"}
+                      flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-md transition-all duration-200
+                      ${
+                        hasPrevPage && !isLoading
+                          ? "bg-amber-700/50 hover:bg-amber-600/50 text-amber-100 border border-amber-600/50 hover:border-amber-500/50 shadow-md hover:shadow-lg transform hover:scale-105"
+                          : "bg-amber-900/30 text-amber-400/50 cursor-not-allowed border border-amber-800/30"
+                      }
                     `}
                   >
-                    <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
-                      {/* Rank Icon */}
-                      <div className="flex-shrink-0">
-                        {getRankIcon(player.rank)}
-                      </div>
+                    <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+                  </button>
 
-                      {/* User Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1 mb-0.5">
-                          <User className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-300/80 flex-shrink-0" />
-                          <h3 className="font-semibold text-amber-100 truncate text-xs sm:text-sm drop-shadow-md">
-                            {player.username}
-                          </h3>
-                        </div>
-                        <p className="text-xs text-amber-200/70 font-mono truncate">
-                          {player.walletAddress}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Score */}
-                    <div className="text-right flex-shrink-0 ml-1 sm:ml-2">
-                      <div className="text-sm sm:text-lg font-bold text-amber-100 drop-shadow-lg">
-                        {player.score.toLocaleString()}
-                      </div>
-                      <div className="text-xs text-amber-200/80 font-medium tracking-wide">
-                        POINTS
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  <button
+                    onClick={handleNextPage}
+                    disabled={!hasNextPage || isLoading}
+                    className={`
+                      flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-md transition-all duration-200
+                      ${
+                        hasNextPage && !isLoading
+                          ? "bg-amber-700/50 hover:bg-amber-600/50 text-amber-100 border border-amber-600/50 hover:border-amber-500/50 shadow-md hover:shadow-lg transform hover:scale-105"
+                          : "bg-amber-900/30 text-amber-400/50 cursor-not-allowed border border-amber-800/30"
+                      }
+                    `}
+                  >
+                    <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>

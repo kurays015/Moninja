@@ -1,85 +1,31 @@
+import axios from "axios";
 import { NextResponse } from "next/server";
-import { createPublicClient, http } from "viem";
-import { monadTestnet } from "viem/chains";
 
-const GAME_ABI = [
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
-    name: "games",
-    outputs: [
-      {
-        internalType: "address",
-        name: "game",
-        type: "address",
-      },
-      {
-        internalType: "string",
-        name: "image",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "name",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "url",
-        type: "string",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-];
+export async function GET(request: Request) {
+  // Get page from URL search params instead of JSON body
+  const { searchParams } = new URL(request.url);
+  const page = searchParams.get("page");
 
-const contractAddress = process.env.CONTRACT_ADDRESS as `0x${string}`;
-const gameAddress = process.env.GAME_ADDRESS as `0x${string}`;
+  if (!page || parseInt(page) < 1) {
+    return NextResponse.json({ error: "Invalid page number" }, { status: 400 });
+  }
 
-const publicClient = createPublicClient({
-  chain: monadTestnet,
-  transport: http(),
-});
-
-export async function GET() {
   try {
-    if (!contractAddress || !gameAddress) {
-      console.error(
-        "Missing required environment variables: CONTRACT_ADDRESS, GAME_ADDRESS"
-      );
-      return NextResponse.json(
-        { error: "Server configuration error" },
-        { status: 500 }
-      );
+    const res = await axios.get(
+      `https://monad-games-id-site.vercel.app/api/leaderboard?page=${page}&gameId=52&sortBy=scores`
+    );
+
+    if (!res.data) {
+      return NextResponse.json({ error: res.statusText }, { status: 404 });
     }
 
-    // Execute the blockchain read
-    const data = await publicClient.readContract({
-      address: contractAddress,
-      abi: GAME_ABI,
-      functionName: "games",
-      args: [gameAddress],
-    });
-
-    console.log(data, "Game data fetched successfully");
-
-    return NextResponse.json({ data });
+    return NextResponse.json({ data: res.data });
   } catch (error: unknown) {
     console.error("Unexpected error in games endpoint:", error);
 
-    // Don't expose internal error details in production
-    const isDevelopment = process.env.NODE_ENV === "development";
-    const errorMessage =
-      isDevelopment && error instanceof Error
-        ? error.message
-        : "Error fetching game data";
-
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    return NextResponse.json(
+      { error: (error as Error).message },
+      { status: 500 }
+    );
   }
 }

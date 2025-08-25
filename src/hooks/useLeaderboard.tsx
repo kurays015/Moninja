@@ -4,19 +4,33 @@ import { useQuery } from "@tanstack/react-query";
 import { apiEndpoints } from "../lib/api";
 import axios from "axios";
 
-export interface LeaderboardResponse {
+interface LeaderBoardData {
+  userId: number;
   rank: number;
   walletAddress: string;
   username: string;
   score: number;
 }
 
-export function useLeaderboard() {
+export interface LeaderboardResponse {
+  data: {
+    data: LeaderBoardData[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  };
+}
+
+export function useLeaderboard(page: number) {
   return useQuery({
-    queryKey: ["leaderboard"],
+    queryKey: ["leaderboard", page], // Include page in query key
     queryFn: async (): Promise<LeaderboardResponse> => {
       const { data } = await axios.get<LeaderboardResponse>(
-        apiEndpoints.leaderBoard
+        apiEndpoints.leaderBoard,
+        { params: { page } }
       );
       return data;
     },

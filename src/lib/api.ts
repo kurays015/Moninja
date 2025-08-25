@@ -42,6 +42,5 @@ export const apiEndpoints = {
   startGameSession: "/api/start-game-session",
   endGameSession: "/api/end-game-session",
   submitScore: "/api/submit-score",
-  leaderBoard:
-    "https://monad-games-id-site.vercel.app/api/leaderboard?page=1&gameId=52&sortBy=scores",
+  leaderBoard: "/api/leaderboard",
 } as const;
