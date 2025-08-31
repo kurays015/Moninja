@@ -1182,7 +1182,7 @@ export default function Moninja() {
   return (
     <div
       ref={gameAreaRef}
-      className="relative w-full h-screen overflow-hidden select-none game-area"
+      className="relative w-full h-[100dvh] overflow-hidden select-none game-area"
     >
       {/* Pause Overlay */}
       <PauseModal
@@ -1193,12 +1193,7 @@ export default function Moninja() {
       />
 
       {/* stats */}
-      <Stats
-        gameStarted={gameStarted}
-        score={score}
-        objects={objects}
-        gameStats={gameStats}
-      />
+      <Stats gameStarted={gameStarted} score={score} gameStats={gameStats} />
 
       <PauseButton
         bombHit={bombHit}
@@ -1209,26 +1204,26 @@ export default function Moninja() {
       />
 
       {/* User Profile Overlay */}
-      <div className="absolute top-4 right-4 z-50">
-        <div className="bg-black/40 backdrop-blur-sm rounded-xl border border-white/20 shadow-lg p-4 min-w-[240px]">
+      <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-50">
+        <div className="bg-black/40 backdrop-blur-sm rounded-lg sm:rounded-xl border border-white/20 shadow-lg p-2 sm:p-3 md:p-4 min-w-[200px] sm:min-w-[240px]">
           {usernameData?.hasUsername ? (
             // User has username - show profile
             <div className="space-y-3">
               {/* Header with connection status */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-green-400 text-xs font-medium">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-green-400 text-xs sm:text-sm font-medium">
                     Connected
                   </span>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="p-1.5 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+                  className="p-1 sm:p-1.5 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
                   title="Disconnect"
                 >
                   <svg
-                    className="w-4 h-4 text-white/70"
+                    className="w-3 h-3 sm:w-4 sm:h-4 text-white/70"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -1246,13 +1241,15 @@ export default function Moninja() {
               {/* User info */}
               <div className="text-center space-y-1">
                 {isLoadingUserName ? (
-                  <div className="flex items-center justify-center gap-2 text-white/70">
-                    <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span className="text-xs">Loading profile...</span>
+                  <div className="flex items-center justify-center gap-1.5 sm:gap-2 text-white/70">
+                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 border border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span className="text-xs sm:text-sm">
+                      Loading profile...
+                    </span>
                   </div>
                 ) : usernameData?.user?.username ? (
                   <div className="space-y-1">
-                    <h3 className="text-sm font-bold text-white">
+                    <h3 className="text-xs sm:text-sm font-bold text-white">
                       @{usernameData.user.username}
                     </h3>
                     <p className="text-xs text-white/50 font-mono">
@@ -1261,7 +1258,7 @@ export default function Moninja() {
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    <p className="text-yellow-400 text-xs font-medium">
+                    <p className="text-yellow-400 text-xs sm:text-sm font-medium">
                       Anonymous Ninja
                     </p>
                     <p className="text-xs text-white/50">
@@ -1272,9 +1269,9 @@ export default function Moninja() {
               </div>
 
               {/* Stats */}
-              <div className="border-t border-white/10 pt-3">
+              <div className="border-t border-white/10 pt-2 sm:pt-3">
                 <div className="text-center">
-                  <div className="text-lg font-bold text-white">
+                  <div className="text-base sm:text-lg font-bold text-white">
                     {playerScoreData?.totalScore || 0}
                   </div>
                   <div className="text-xs text-white/60">Total Score</div>
@@ -1283,18 +1280,18 @@ export default function Moninja() {
             </div>
           ) : (
             // No username - minimal prompt
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></div>
               </div>
               <Link
                 href="https://monad-games-id-site.vercel.app"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-400/30 rounded-lg text-yellow-300 hover:text-yellow-200 transition-all duration-200 text-xs font-medium"
+                className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-400/30 rounded-lg text-yellow-300 hover:text-yellow-200 transition-all duration-200 text-xs font-medium"
                 target="_blank"
                 referrerPolicy="no-referrer"
               >
                 <svg
-                  className="w-3 h-3"
+                  className="w-2.5 h-2.5 sm:w-3 sm:h-3"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1306,7 +1303,10 @@ export default function Moninja() {
                     d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
                   />
                 </svg>
-                Create a username to play
+                <span className="hidden sm:inline">
+                  Create a username to play
+                </span>
+                <span className="sm:hidden">Create username</span>
               </Link>
               <button
                 onClick={handleLogout}
@@ -1314,7 +1314,7 @@ export default function Moninja() {
                 title="Disconnect"
               >
                 <svg
-                  className="w-5 h-5 text-white/70"
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-white/70"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
