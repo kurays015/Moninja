@@ -1114,10 +1114,9 @@ export default function Moninja() {
         },
         {
           onSuccess: data => {
-            console.log("suck", data);
             setGameSessionToken(data.sessionToken);
             setGameSessionId(data.sessionId);
-            console.log("Game session started:", data.sessionId);
+            console.log("Game session started...");
           },
           onError: error => {
             console.error("Error starting game session:", error);
