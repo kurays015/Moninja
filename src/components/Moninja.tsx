@@ -17,7 +17,6 @@ import {
 } from "../types";
 import { useCrossAppAccount } from "../hooks/useCrossAppAccount";
 import Image from "next/image";
-import Link from "next/link";
 import useAudioManager from "../hooks/useAudioManager";
 import SliceEffects from "./SliceEffects";
 import FrenzyNotification from "./FrenzyNotification";
@@ -29,12 +28,12 @@ import PauseModal from "./PauseModal";
 import GameOverModal from "./GameOverModal";
 import SlashTrail from "./SlashTrail";
 import { usePlayerTotalScore } from "../hooks/usePlayerTotalScore";
-import { usePrivy } from "@privy-io/react-auth";
 import { useUsername } from "../hooks/useUsername";
 import { useGameSession } from "../hooks/useGameSession";
 import PauseButton from "./PauseButton";
 import { toast } from "react-toastify";
 import TransactionToast from "./TransactionToast";
+import ResponsiveUserProfile from "./PlayerStatusPanel";
 
 export default function Moninja() {
   const [score, setScore] = useState<number>(0);
@@ -75,7 +74,6 @@ export default function Moninja() {
   const frenzyWaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   //hooks
-  const { logout } = usePrivy();
   const { walletAddress } = useCrossAppAccount();
   const { preloadSound, playSound, stopBombSound, cleanupAll } =
     useAudioManager();
@@ -258,9 +256,8 @@ export default function Moninja() {
 
   // Check if we should trigger frenzy mode
   const checkFrenzyMode = useCallback(() => {
-    const shouldTriggerFrenzy =
-      score >= 20 && Math.floor(score / 20) > Math.floor((score - 1) / 20);
-    return shouldTriggerFrenzy && !frenzyMode; // Don't trigger if already in frenzy
+    const scoreMilestone = score > 0 && score % 10 === 0; // Every 10 points
+    return scoreMilestone && !frenzyMode && Math.random() < 0.6; // 60% chance
   }, [score, frenzyMode]);
 
   // Generate a frenzy wave
@@ -271,6 +268,7 @@ export default function Moninja() {
     const hasVisibleMonad = objectsRef.current.some(
       obj => obj.type === "monad" && !obj.sliced
     );
+
     if (hasVisibleMonad) {
       console.log(
         "Monad visible, skipping object creation. Objects:",
@@ -650,6 +648,10 @@ export default function Moninja() {
           setStartButton(prev => (prev ? { ...prev, sliced: true } : null));
           setGameStarted(true);
 
+          // IMMEDIATELY clear the slash path when start button is hit
+          setIsSlashing(false);
+          setSlashPath([]);
+
           if (!gamePaused) {
             playSound("start");
           }
@@ -673,7 +675,9 @@ export default function Moninja() {
           setTimeout(() => {
             setSliceEffects(prev => prev.filter(e => e.id !== startEffect.id));
           }, 1000);
-          break;
+
+          // Return early to prevent further collision checks
+          return;
         }
       }
     }
@@ -963,53 +967,53 @@ export default function Moninja() {
   }, []);
 
   // Mouse event handlers
-  const handleMouseDown = useCallback(
-    (e: MouseEvent): void => {
-      if (gameOver || gamePaused || bombHit) return;
-      setIsSlashing(true);
-      const rect = gameAreaRef.current?.getBoundingClientRect();
-      const x = e.clientX - (rect?.left ?? 0);
-      const y = e.clientY - (rect?.top ?? 0);
-      setSlashPath([{ x, y }]);
-    },
-    [gameOver, gamePaused, bombHit]
-  );
+  // const handleMouseDown = useCallback(
+  //   (e: MouseEvent): void => {
+  //     if (gameOver || gamePaused || bombHit) return;
+  //     setIsSlashing(true);
+  //     const rect = gameAreaRef.current?.getBoundingClientRect();
+  //     const x = e.clientX - (rect?.left ?? 0);
+  //     const y = e.clientY - (rect?.top ?? 0);
+  //     setSlashPath([{ x, y }]);
+  //   },
+  //   [gameOver, gamePaused, bombHit]
+  // );
 
-  const handleMouseMove = useCallback(
-    (e: MouseEvent): void => {
-      if (!isSlashing || gameOver || gamePaused || bombHit) return;
+  // const handleMouseMove = useCallback(
+  //   (e: MouseEvent): void => {
+  //     if (!isSlashing || gameOver || gamePaused || bombHit) return;
 
-      const rect = gameAreaRef.current?.getBoundingClientRect();
-      const x = e.clientX - (rect?.left ?? 0);
-      const y = e.clientY - (rect?.top ?? 0);
-      setSlashPath((prev: SlashPoint[]) => {
-        const last = prev[prev.length - 1];
-        const points: SlashPoint[] = [];
-        if (last) {
-          const dx = x - last.x;
-          const dy = y - last.y;
-          const distance = Math.hypot(dx, dy);
-          const steps = Math.max(1, Math.min(6, Math.floor(distance / 6)));
-          for (let i = 1; i <= steps; i++) {
-            points.push({
-              x: last.x + (dx * i) / steps,
-              y: last.y + (dy * i) / steps,
-            });
-          }
-        } else {
-          points.push({ x, y });
-        }
-        const newPath: SlashPoint[] = [...prev, ...points];
-        return newPath.slice(-30);
-      });
-    },
-    [isSlashing, gameOver, gamePaused, bombHit]
-  );
+  //     const rect = gameAreaRef.current?.getBoundingClientRect();
+  //     const x = e.clientX - (rect?.left ?? 0);
+  //     const y = e.clientY - (rect?.top ?? 0);
+  //     setSlashPath((prev: SlashPoint[]) => {
+  //       const last = prev[prev.length - 1];
+  //       const points: SlashPoint[] = [];
+  //       if (last) {
+  //         const dx = x - last.x;
+  //         const dy = y - last.y;
+  //         const distance = Math.hypot(dx, dy);
+  //         const steps = Math.max(1, Math.min(6, Math.floor(distance / 6)));
+  //         for (let i = 1; i <= steps; i++) {
+  //           points.push({
+  //             x: last.x + (dx * i) / steps,
+  //             y: last.y + (dy * i) / steps,
+  //           });
+  //         }
+  //       } else {
+  //         points.push({ x, y });
+  //       }
+  //       const newPath: SlashPoint[] = [...prev, ...points];
+  //       return newPath.slice(-30);
+  //     });
+  //   },
+  //   [isSlashing, gameOver, gamePaused, bombHit]
+  // );
 
-  const handleMouseUp = useCallback((): void => {
-    setIsSlashing(false);
-    setSlashPath([]);
-  }, []);
+  // const handleMouseUp = useCallback((): void => {
+  //   setIsSlashing(false);
+  //   setSlashPath([]);
+  // }, []);
 
   // Game loop
   useEffect(() => {
@@ -1077,25 +1081,219 @@ export default function Moninja() {
     }
   }, [gameStarted, startButton, createStartButton, usernameData?.hasUsername]);
 
-  // Add event listeners
+  const handleEnd = useCallback((): void => {
+    setIsSlashing(false);
+    // Clear the slash path immediately for mobile-like behavior
+    setSlashPath([]);
+  }, []);
+
+  const handleStart = useCallback((e: MouseEvent | TouchEvent): void => {
+    // Prevent context menu on mobile long press and default behaviors
+    e.preventDefault();
+    // Prevent event bubbling
+    e.stopPropagation();
+
+    // Get position using a fresh calculation each time
+    const rect = gameAreaRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    let clientX: number, clientY: number;
+
+    if ("touches" in e) {
+      const touch = e.touches[0] || e.changedTouches[0];
+      if (!touch) return;
+      clientX = touch.clientX;
+      clientY = touch.clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    setIsSlashing(true);
+    setSlashPath([{ x, y }]);
+  }, []);
+
+  const handleMove = useCallback(
+    (e: MouseEvent | TouchEvent): void => {
+      if (!isSlashing || gameOver || gamePaused || bombHit) return;
+
+      // Prevent scrolling on mobile when slashing and default behaviors
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Get position using a fresh calculation each time
+      const rect = gameAreaRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      let clientX: number, clientY: number;
+
+      if ("touches" in e) {
+        const touch = e.touches[0] || e.changedTouches[0];
+        if (!touch) return;
+        clientX = touch.clientX;
+        clientY = touch.clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+
+      setSlashPath((prev: SlashPoint[]) => {
+        const last = prev[prev.length - 1];
+        const points: SlashPoint[] = [];
+
+        if (last) {
+          const dx = x - last.x;
+          const dy = y - last.y;
+          const distance = Math.hypot(dx, dy);
+
+          // Only add points if there's meaningful movement (reduces jitter)
+          if (distance > 2) {
+            const steps = Math.max(1, Math.min(8, Math.floor(distance / 4)));
+            for (let i = 1; i <= steps; i++) {
+              points.push({
+                x: last.x + (dx * i) / steps,
+                y: last.y + (dy * i) / steps,
+              });
+            }
+          }
+        } else {
+          points.push({ x, y });
+        }
+
+        const newPath: SlashPoint[] = [...prev, ...points];
+        // Keep trail shorter for better performance and more realistic look
+        return newPath.slice(-25);
+      });
+    },
+    [isSlashing, gameOver, gamePaused, bombHit]
+  );
+
   useEffect(() => {
     const gameArea: HTMLDivElement | null = gameAreaRef.current;
     if (!gameArea) return;
 
+    // Mouse event handlers
     const mouseDownHandler = (e: MouseEvent): void => {
-      handleMouseDown(e);
+      // Only handle left mouse button
+      if (e.button !== 0) return;
+      handleStart(e);
     };
 
+    const mouseMoveHandler = (e: MouseEvent): void => {
+      // Only process if left button is pressed
+      if (e.buttons !== 1) return;
+      handleMove(e);
+    };
+
+    const mouseUpHandler = (): void => {
+      handleEnd();
+    };
+
+    const mouseLeaveHandler = (): void => {
+      // End slashing if mouse leaves the window/game area
+      if (isSlashing) {
+        handleEnd();
+      }
+    };
+
+    // Touch event handlers with improved mobile handling
+    const touchStartHandler = (e: TouchEvent): void => {
+      // Only handle single touch
+      if (e.touches.length > 1) {
+        handleEnd();
+        return;
+      }
+      handleStart(e);
+    };
+
+    const touchMoveHandler = (e: TouchEvent): void => {
+      // Only handle single touch
+      if (e.touches.length > 1) {
+        handleEnd();
+        return;
+      }
+      handleMove(e);
+    };
+
+    const touchEndHandler = (e: TouchEvent): void => {
+      e.preventDefault();
+      e.stopPropagation();
+      handleEnd();
+    };
+
+    const touchCancelHandler = (e: TouchEvent): void => {
+      e.preventDefault();
+      e.stopPropagation();
+      handleEnd();
+    };
+
+    // Orientation change handler to force cleanup
+    const orientationChangeHandler = (): void => {
+      // Force cleanup on orientation change
+      handleEnd();
+    };
+
+    // Add mouse events
     gameArea.addEventListener("mousedown", mouseDownHandler);
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("mousemove", mouseMoveHandler);
+    document.addEventListener("mouseup", mouseUpHandler);
+    gameArea.addEventListener("mouseleave", mouseLeaveHandler);
+
+    // Add touch events with proper options
+    gameArea.addEventListener("touchstart", touchStartHandler, {
+      passive: false,
+    });
+    gameArea.addEventListener("touchmove", touchMoveHandler, {
+      passive: false,
+    });
+    document.addEventListener("touchend", touchEndHandler, {
+      passive: false,
+    });
+    document.addEventListener("touchcancel", touchCancelHandler, {
+      passive: false,
+    });
+
+    // Add orientation change listener
+    window.addEventListener("orientationchange", orientationChangeHandler);
+    // Also listen for resize as a fallback
+    window.addEventListener("resize", orientationChangeHandler);
 
     return () => {
+      // Remove mouse events
       gameArea.removeEventListener("mousedown", mouseDownHandler);
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("mousemove", mouseMoveHandler);
+      document.removeEventListener("mouseup", mouseUpHandler);
+      gameArea.removeEventListener("mouseleave", mouseLeaveHandler);
+
+      // Remove touch events
+      gameArea.removeEventListener("touchstart", touchStartHandler);
+      gameArea.removeEventListener("touchmove", touchMoveHandler);
+      document.removeEventListener("touchend", touchEndHandler);
+      document.removeEventListener("touchcancel", touchCancelHandler);
+
+      // Remove orientation change listeners
+      window.removeEventListener("orientationchange", orientationChangeHandler);
+      window.removeEventListener("resize", orientationChangeHandler);
     };
-  }, [handleMouseDown, handleMouseMove, handleMouseUp]);
+  }, [handleStart, handleMove, handleEnd, isSlashing]);
+
+  // Additional effect to force clear slash path on certain conditions
+  useEffect(() => {
+    const clearSlashOnConditions = () => {
+      if (gameOver || gamePaused || bombHit || !gameStarted) {
+        setIsSlashing(false);
+        setSlashPath([]);
+      }
+    };
+
+    clearSlashOnConditions();
+  }, [gameOver, gamePaused, bombHit, gameStarted]);
 
   // Initialize game session when component mounts or game starts
   useEffect(() => {
@@ -1114,10 +1312,9 @@ export default function Moninja() {
         },
         {
           onSuccess: data => {
-            console.log("suck", data);
             setGameSessionToken(data.sessionToken);
             setGameSessionId(data.sessionId);
-            console.log("Game session started:", data.sessionId);
+            console.log("Game session started...");
           },
           onError: error => {
             console.error("Error starting game session:", error);
@@ -1169,10 +1366,6 @@ export default function Moninja() {
     [score]
   );
 
-  const handleLogout = () => {
-    logout();
-  };
-
   const togglePause = useCallback(() => {
     if (gameStarted && !gameOver && !bombHit) {
       setGamePaused(prev => !prev);
@@ -1203,134 +1396,12 @@ export default function Moninja() {
         onTogglePause={() => togglePause()}
       />
 
-      {/* User Profile Overlay */}
-      <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-50">
-        <div className="bg-black/40 backdrop-blur-sm rounded-lg sm:rounded-xl border border-white/20 shadow-lg p-2 sm:p-3 md:p-4 min-w-[200px] sm:min-w-[240px]">
-          {usernameData?.hasUsername ? (
-            // User has username - show profile
-            <div className="space-y-3">
-              {/* Header with connection status */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-green-400 text-xs sm:text-sm font-medium">
-                    Connected
-                  </span>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="p-1 sm:p-1.5 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-                  title="Disconnect"
-                >
-                  <svg
-                    className="w-3 h-3 sm:w-4 sm:h-4 text-white/70"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                    />
-                  </svg>
-                </button>
-              </div>
-
-              {/* User info */}
-              <div className="text-center space-y-1">
-                {isLoadingUserName ? (
-                  <div className="flex items-center justify-center gap-1.5 sm:gap-2 text-white/70">
-                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 border border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span className="text-xs sm:text-sm">
-                      Loading profile...
-                    </span>
-                  </div>
-                ) : usernameData?.user?.username ? (
-                  <div className="space-y-1">
-                    <h3 className="text-xs sm:text-sm font-bold text-white">
-                      @{usernameData.user.username}
-                    </h3>
-                    <p className="text-xs text-white/50 font-mono">
-                      {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <p className="text-yellow-400 text-xs sm:text-sm font-medium">
-                      Anonymous Ninja
-                    </p>
-                    <p className="text-xs text-white/50">
-                      Create username to save progress
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Stats */}
-              <div className="border-t border-white/10 pt-2 sm:pt-3">
-                <div className="text-center">
-                  <div className="text-base sm:text-lg font-bold text-white">
-                    {playerScoreData?.totalScore || 0}
-                  </div>
-                  <div className="text-xs text-white/60">Total Score</div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            // No username - minimal prompt
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></div>
-              </div>
-              <Link
-                href="https://monad-games-id-site.vercel.app"
-                className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-400/30 rounded-lg text-yellow-300 hover:text-yellow-200 transition-all duration-200 text-xs font-medium"
-                target="_blank"
-                referrerPolicy="no-referrer"
-              >
-                <svg
-                  className="w-2.5 h-2.5 sm:w-3 sm:h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                  />
-                </svg>
-                <span className="hidden sm:inline">
-                  Create a username to play
-                </span>
-                <span className="sm:hidden">Create username</span>
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer"
-                title="Disconnect"
-              >
-                <svg
-                  className="w-4 h-4 sm:w-5 sm:h-5 text-white/70"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                  />
-                </svg>
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      <ResponsiveUserProfile
+        isLoadingUserName={isLoadingUserName}
+        usernameData={usernameData}
+        walletAddress={walletAddress}
+        playerScoreData={playerScoreData}
+      />
 
       {/* Frenzy Notification */}
       <FrenzyNotification notificationMessage={frenzyNotification} />
@@ -1352,10 +1423,10 @@ export default function Moninja() {
             alt="start-watermelon"
             width={160}
             height={160}
-            className="w-40 h-40 object-contain animate-spin [animation-duration:8s]"
+            className="w-40 h-40 object-contain animate-spin [animation-duration:8s] landscape:w-30 landscape:h-30"
             draggable={false}
           />
-          <p className="text-center font-semibold italic text-3xl">
+          <p className="text-center font-extrabold italic text-4xl text-yellow-400 drop-shadow-[0_0_10px_rgba(255,255,0,0.7)] tracking-wider animate-pulse">
             Slash to start!
           </p>
         </div>
@@ -1387,7 +1458,6 @@ export default function Moninja() {
         gameOver={gameOver}
         gameStats={gameStats}
         resetGame={resetGame}
-        score={score}
       />
     </div>
   );

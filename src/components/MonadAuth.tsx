@@ -49,7 +49,7 @@ export default function MonadAuth() {
         }
       };
     }
-  }, [volume]); // Remove volume dependency to prevent re-initialization
+  }, []);
 
   // Update music volume when volume state changes
   useEffect(() => {
@@ -154,16 +154,20 @@ export default function MonadAuth() {
   // Not authenticated state
   if (!authenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="bg-black/20 backdrop-blur-md p-8 rounded-3xl border border-white/20 shadow-2xl max-w-md w-full text-center">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-white mb-2">Moninja🥷</h1>
-            <p className="text-white/80 text-lg">Slice your way to victory!</p>
+      <div className="min-h-screen flex items-center justify-center p-4 landscape:p-2">
+        <div className="bg-black/20 backdrop-blur-md p-8 landscape:p-4 rounded-3xl border border-white/20 shadow-2xl max-w-md landscape:max-w-lg w-full text-center landscape:max-h-[90vh] landscape:overflow-y-auto">
+          <div className="mb-8 landscape:mb-4">
+            <h1 className="text-4xl landscape:text-2xl font-bold text-white mb-2 landscape:mb-1">
+              Moninja🥷
+            </h1>
+            <p className="text-white/80 text-lg landscape:text-sm">
+              Slice your way to victory!
+            </p>
           </div>
 
-          <div className="mb-8">
-            <div className="flex justify-center space-x-4 mb-6">
-              <div className="w-16 h-16 relative">
+          <div className="mb-8 landscape:mb-4">
+            <div className="flex justify-center space-x-4 landscape:space-x-2 mb-6 landscape:mb-3">
+              <div className="w-16 h-16 landscape:w-10 landscape:h-10 relative">
                 <Image
                   src="/monanimals/4ksalmonad.png"
                   alt="4ksalmonad"
@@ -173,7 +177,7 @@ export default function MonadAuth() {
                   draggable={false}
                 />
               </div>
-              <div className="w-16 h-16 relative">
+              <div className="w-16 h-16 landscape:w-10 landscape:h-10 relative">
                 <Image
                   src="/monanimals/Chog.png"
                   alt="Chog"
@@ -184,7 +188,7 @@ export default function MonadAuth() {
                   draggable={false}
                 />
               </div>
-              <div className="w-16 h-16 relative">
+              <div className="w-16 h-16 landscape:w-10 landscape:h-10 relative">
                 <Image
                   src="/monanimals/cutlandak2.png"
                   alt="cutlandak2"
@@ -195,7 +199,7 @@ export default function MonadAuth() {
                   draggable={false}
                 />
               </div>
-              <div className="w-16 h-16 relative">
+              <div className="w-16 h-16 landscape:w-10 landscape:h-10 relative">
                 <Image
                   src="/monanimals/fish_nad.png"
                   alt="fish_nad"
@@ -207,7 +211,7 @@ export default function MonadAuth() {
                 />
               </div>
             </div>
-            <p className="text-white/70">
+            <p className="text-white/70 landscape:text-xs">
               Connect your Monad Games ID to start slashing monanimals to climb
               to the leaderboard!
             </p>
@@ -215,7 +219,7 @@ export default function MonadAuth() {
 
           <button
             onClick={handleLogin}
-            className="w-full px-6 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 transition-all duration-300 rounded-2xl font-bold text-lg text-black shadow-lg hover:shadow-xl hover:scale-105 transform focus:outline-none focus:ring-4 focus:ring-yellow-300/50"
+            className="w-full px-6 py-4 landscape:px-4 landscape:py-2 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 transition-all duration-300 rounded-2xl font-bold text-lg landscape:text-sm text-amber-900 shadow-lg hover:shadow-xl hover:scale-105 transform focus:outline-none focus:ring-4 focus:ring-yellow-300/50"
           >
             ⚔️ Connect & Play
           </button>
@@ -235,6 +239,9 @@ export default function MonadAuth() {
             <div className="relative">
               <button
                 onClick={toggleMute}
+                onMouseDown={e => e.stopPropagation()}
+                onTouchStart={e => e.stopPropagation()}
+                onTouchEnd={toggleMute}
                 className="p-2 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
                 title={volume === 0 ? "Unmute" : "Mute"}
               >
@@ -290,6 +297,9 @@ export default function MonadAuth() {
             {/* Volume Slider Toggle */}
             <button
               onClick={() => setShowVolumeSlider(!showVolumeSlider)}
+              onMouseDown={e => e.stopPropagation()}
+              onTouchStart={e => e.stopPropagation()}
+              onTouchEnd={() => setShowVolumeSlider(!showVolumeSlider)}
               className="p-2 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
               title="Volume Slider"
             >
@@ -326,7 +336,7 @@ export default function MonadAuth() {
       </div>
 
       {/* Game Area */}
-      <div className="relative">
+      <div>
         <Moninja />
       </div>
     </div>

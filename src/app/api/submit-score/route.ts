@@ -21,6 +21,13 @@ export async function POST(request: Request) {
     const { player, scoreAmount, transactionAmount, sessionId } =
       await request.json();
 
+    if (!player) {
+      return NextResponse.json(
+        { error: "No monad games id walletAddress yet." },
+        { status: 400 }
+      );
+    }
+
     // 1. VALIDATE INPUT
     if (
       !player ||

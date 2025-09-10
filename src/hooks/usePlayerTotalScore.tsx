@@ -2,10 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api, apiEndpoints } from "../lib/api";
-
-interface PlayerScoreResponse {
-  totalScore: number;
-}
+import { PlayerScoreResponse } from "../types";
 
 export function usePlayerTotalScore(
   walletAddress: string | null,

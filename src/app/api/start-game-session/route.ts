@@ -22,7 +22,7 @@ export async function POST(request: Request) {
         iat: Math.floor(Date.now() / 1000),
       },
       process.env.JWT_SECRET!,
-      { expiresIn: "2h" } // Session expires in 2 hours
+      { expiresIn: "1h" }
     );
 
     return NextResponse.json({
