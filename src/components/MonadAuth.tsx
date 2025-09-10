@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import Moninja from "./Moninja";
 import Image from "next/image";
+import FullscreenButton from "./FullScreen";
 
 export default function MonadAuth() {
   const { authenticated, ready, login } = usePrivy();
@@ -313,7 +314,7 @@ export default function MonadAuth() {
             </button>
 
             {/* Music Info */}
-            <div className="text-white/80 text-sm">
+            <div className="text-white/80 text-sm flex items-center gap-3">
               {isMusicPlaying ? (
                 <div className="flex items-center gap-1">
                   <div className="w-1 h-3 bg-green-400 rounded animate-pulse"></div>
@@ -330,6 +331,7 @@ export default function MonadAuth() {
               ) : (
                 <span className="text-xs text-gray-400">Paused</span>
               )}
+              <FullscreenButton />
             </div>
           </div>
         </div>
