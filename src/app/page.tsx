@@ -1,5 +1,6 @@
 import Leaderboard from "../components/Leaderboard";
 import MonadAuth from "../components/MonadAuth";
+import Image from "next/image";
 
 export default function Home() {
   return (
@@ -15,7 +16,12 @@ export default function Home() {
             For the best ninja slicing experience, please rotate your phone to
             <span className="text-amber-300 font-semibold">
               {" "}
-              landscape mode
+              landscape mode{" "}
+            </span>
+            and
+            <span className="text-amber-300 font-semibold">
+              {" "}
+              add to home screen
             </span>
             .
           </p>
@@ -26,9 +32,20 @@ export default function Home() {
             <div className="text-3xl transform rotate-90">📱</div>
           </div>
 
-          <p className="text-sm text-amber-300/70 font-medium">
+          <p className="text-sm text-amber-300/70 font-medium mb-4">
             Turn your phone sideways to continue
           </p>
+
+          {/* Add Guide Image */}
+          <div className="mt-4">
+            <Image
+              src="/guide.jpeg" // place the uploaded file into /public/guide.jpeg
+              alt="Add to home screen guide"
+              width={300}
+              height={600}
+              className="rounded-xl shadow-lg"
+            />
+          </div>
         </div>
       </div>
 
