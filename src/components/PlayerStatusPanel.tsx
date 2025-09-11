@@ -138,7 +138,7 @@ export default function ResponsiveUserProfile({
                           </span>
                         </div>
                         <Link
-                          href="https://monad-games-id-site.vercel.app"
+                          href="https://monadclip.vercel.app"
                           className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-400/30 rounded text-yellow-300 hover:text-yellow-200 transition-all duration-200 text-xs font-medium w-full"
                           target="_blank"
                           referrerPolicy="no-referrer"
@@ -171,7 +171,7 @@ export default function ResponsiveUserProfile({
                 <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></div>
               </div>
               <Link
-                href="https://monad-games-id-site.vercel.app"
+                href="https://monadclip.vercel.app"
                 className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-400/30 rounded-lg text-yellow-300 hover:text-yellow-200 transition-all duration-200 text-xs font-medium"
                 target="_blank"
                 referrerPolicy="no-referrer"
