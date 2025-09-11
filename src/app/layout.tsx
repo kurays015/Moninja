@@ -17,6 +17,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Moninja",
+  description:
+    "MONINJA is a fast-paced slicing game inspired by the classic Fruit Ninja, but with a unique twist — instead of fruits, you’ll slash through Monanimals, quirky and mystical creatures that leap across your screen. Armed with razor-sharp reflexes, you’ll swipe to cut, chain combos, and unleash frenzy modes for massive scores.",
   creator: "Kurays",
 };
 
