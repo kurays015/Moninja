@@ -74,6 +74,9 @@ export default function Leaderboard() {
         {/* Main Toggle Button */}
         <div className="mb-2 sm:mb-4 relative z-50">
           <button
+            onMouseDown={e => e.stopPropagation()}
+            onTouchStart={e => e.stopPropagation()}
+            onTouchEnd={() => setIsLeaderboardVisible(!isLeaderboardVisible)}
             onClick={() => setIsLeaderboardVisible(!isLeaderboardVisible)}
             className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-amber-800/90 hover:bg-amber-700/90 text-amber-100 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 relative z-50 backdrop-blur-sm border border-amber-600/50 hover:border-amber-500/50 text-xs sm:text-sm"
           >

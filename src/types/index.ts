@@ -106,3 +106,15 @@ export interface SubmitScoreResponse {
   scoreAmount: number;
   transactionAmount: number;
 }
+
+export interface UsernameResponse {
+  hasUsername: boolean;
+  user?: {
+    username: string;
+  };
+  error?: string;
+}
+
+export interface PlayerScoreResponse {
+  totalScore: number;
+}

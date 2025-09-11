@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { SessionData } from "@/src/types";
 
@@ -25,13 +25,13 @@ const sessionStats = new Map<
   }
 >();
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     // 1. VALIDATE AUTHORIZATION HEADER
     const authHeader = request.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json(
-        { error: "Missing or invalid authorization header" },
+        { message: "Missing or invalid authorization header" },
         { status: 401 }
       );
     }
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     if (!sessionId) {
       return NextResponse.json(
-        { error: "Session ID is required" },
+        { message: "Session ID is required" },
         { status: 400 }
       );
     }
@@ -58,14 +58,14 @@ export async function POST(request: NextRequest) {
       // Verify the session ID matches the token
       if (sessionData.sessionId !== sessionId) {
         return NextResponse.json(
-          { error: "Session ID mismatch" },
+          { message: "Session ID mismatch" },
           { status: 401 }
         );
       }
     } catch (jwtError) {
       console.error("JWT verification failed:", jwtError);
       return NextResponse.json(
-        { error: "Invalid or expired session token" },
+        { message: "Invalid or expired session token" },
         { status: 401 }
       );
     }
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       );
     } else if (activeSession.player !== sessionData.player) {
       return NextResponse.json(
-        { error: "Session player mismatch" },
+        { message: "Session player mismatch" },
         { status: 401 }
       );
     }
@@ -155,6 +155,6 @@ export async function POST(request: NextRequest) {
         ? error.message
         : "Internal server error";
 
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    return NextResponse.json({ message: errorMessage }, { status: 500 });
   }
 }

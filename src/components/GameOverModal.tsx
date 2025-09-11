@@ -1,8 +1,9 @@
+import Image from "next/image";
 import { GameStats } from "../types";
-
+import { WoodStyles } from "./WoodStyle";
+// import chog from "../../public/monanimals/Chog.png"
 interface GameOverModalProps {
   gameOver: boolean;
-  score: number;
   gameStats: GameStats;
   resetGame: () => void;
 }
@@ -11,54 +12,147 @@ export default function GameOverModal({
   gameOver,
   gameStats,
   resetGame,
-  score,
 }: GameOverModalProps) {
+  const handleButtonClick = (e: React.MouseEvent | React.TouchEvent) => {
+    // Stop event from bubbling to parent game area
+    e.stopPropagation();
+    e.preventDefault();
+
+    // Call reset game
+    resetGame();
+  };
+
   return (
     <>
+      <WoodStyles />
       {gameOver && (
-        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white/95 p-8 md:p-10 rounded-3xl shadow-2xl border border-white/30 max-w-md w-[92%] text-center">
-            <div className="text-6xl mb-2">💥</div>
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-red-500 to-fuchsia-600">
-              Game Over
-            </h2>
-            <p className="text-base md:text-lg text-gray-700 mb-6">
-              You hit a bomb. Better luck next run!
-            </p>
+        <div
+          className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          // Prevent game area events from interfering
+          onMouseDown={e => e.stopPropagation()}
+          onMouseMove={e => e.stopPropagation()}
+          onMouseUp={e => e.stopPropagation()}
+          onTouchStart={e => e.stopPropagation()}
+          onTouchMove={e => e.stopPropagation()}
+          onTouchEnd={e => e.stopPropagation()}
+        >
+          <div
+            className="wood-panel wood-grain wood-texture relative
+            w-full max-w-md 
+            portrait:w-[95%] portrait:max-w-lg portrait:p-6 portrait:md:p-8 portrait:lg:p-10
+            landscape:max-w-[85vw] landscape:max-h-[75vh] landscape:p-3 landscape:sm:p-4
+            landscape:md:max-w-[70vw] landscape:md:max-h-[70vh] landscape:md:p-5
+            rounded-3xl landscape:rounded-2xl shadow-2xl text-center
+            border-4 border-amber-800/60"
+          >
+            {/* Decorative wood overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-amber-700/10 to-stone-900/20 pointer-events-none rounded-3xl landscape:rounded-2xl"></div>
+            <div className="absolute inset-0 bg-gradient-to-tr from-amber-600/5 via-transparent to-amber-800/10 pointer-events-none rounded-3xl landscape:rounded-2xl"></div>
 
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <div className="rounded-2xl bg-gradient-to-br from-yellow-400/20 to-amber-300/20 p-4 border border-amber-300/40">
-                <div className="text-3xl font-extrabold text-amber-600">
-                  {score}
+            {/* Content Container */}
+            <div
+              className="relative z-10 
+              portrait:block
+              landscape:flex landscape:items-center landscape:gap-4 landscape:text-left landscape:min-h-0"
+            >
+              {/* Header Section */}
+              <div
+                className="
+                portrait:mb-6 
+                landscape:flex-1 landscape:min-w-0"
+              >
+                <div
+                  className="
+                  portrait:text-4xl portrait:md:text-6xl portrait:mb-3
+                  landscape:text-2xl landscape:mb-2
+                  flex justify-center landscape:justify-start"
+                >
+                  <Image
+                    src="/monanimals/Chog.png"
+                    height={50}
+                    width={50}
+                    alt="chog"
+                    className="portrait:w-12 portrait:h-12 landscape:w-8 landscape:h-8"
+                  />
                 </div>
-                <div className="text-xs uppercase tracking-wider text-amber-800/80">
-                  Final Score
-                </div>
+
+                <h2
+                  className="
+                  portrait:text-2xl portrait:md:text-4xl portrait:mb-3
+                  landscape:text-xl landscape:mb-2
+                  font-extrabold text-yellow-100 drop-shadow-xl"
+                >
+                  BATTLE ENDED
+                </h2>
+
+                <p
+                  className="
+                  portrait:text-sm portrait:md:text-lg portrait:mb-4
+                  landscape:text-xs landscape:mb-2 landscape:leading-tight
+                  text-yellow-200/90 font-medium drop-shadow-lg"
+                >
+                  Your blade met it&apos;s match! The bomb has claimed victory.
+                </p>
               </div>
-              <div className="rounded-2xl bg-gradient-to-br from-sky-400/20 to-indigo-300/20 p-4 border border-sky-300/40">
-                <div className="text-3xl font-extrabold text-indigo-600">
-                  {gameStats.speedLevel}
-                </div>
-                <div className="text-xs uppercase tracking-wider text-indigo-800/80">
-                  Level Reached
-                </div>
-              </div>
-              <div className="rounded-2xl bg-gradient-to-br from-emerald-400/20 to-green-300/20 p-4 border border-emerald-300/40 col-span-2">
-                <div className="text-xl font-bold text-emerald-700">
-                  {gameStats.objectsSliced}
-                </div>
-                <div className="text-xs uppercase tracking-wider text-emerald-900/80">
-                  Fruits Sliced
+
+              {/* Stats Section */}
+              <div
+                className="
+                portrait:mb-6 
+                landscape:flex-shrink-0 landscape:mb-0"
+              >
+                <div
+                  className="
+                  portrait:grid portrait:grid-cols-2 portrait:gap-3
+                  landscape:flex landscape:flex-col landscape:gap-2 landscape:w-24"
+                >
+                  <div
+                    className="wood-stat-card wood-texture rounded-2xl 
+                    portrait:p-3 portrait:col-span-2
+                    landscape:p-2 landscape:rounded-lg"
+                  >
+                    <div
+                      className="
+                      portrait:text-xl portrait:font-bold
+                      landscape:text-lg landscape:font-bold
+                      text-yellow-200 drop-shadow-lg"
+                    >
+                      {gameStats.objectsSliced}
+                    </div>
+                    <div
+                      className="
+                      portrait:text-xs
+                      landscape:text-[10px] landscape:leading-tight
+                      uppercase tracking-wider text-yellow-300/90 font-bold"
+                    >
+                      🍉score
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
+            {/* Button Section */}
+            <div
+              className="relative z-10 
+              portrait:mt-6
+              landscape:mt-3 landscape:flex landscape:justify-center"
+            >
               <button
-                onClick={resetGame}
-                className="flex-1 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
+                onClick={handleButtonClick}
+                onTouchEnd={handleButtonClick}
+                onMouseDown={e => e.stopPropagation()}
+                onTouchStart={e => e.stopPropagation()}
+                className="wood-button wood-texture 
+                  portrait:w-full portrait:py-3 portrait:px-6 portrait:text-sm
+                  landscape:px-4 landscape:py-2 landscape:text-xs landscape:min-w-[120px]
+                  rounded-xl landscape:rounded-lg
+                  transition-all duration-300 font-bold text-yellow-100 
+                  hover:scale-105 active:scale-95 drop-shadow-xl
+                  cursor-pointer select-none"
+                style={{ touchAction: "manipulation" }}
               >
-                🔄 Play Again
+                ⚔️ SLASH MORE ⚔️
               </button>
             </div>
           </div>

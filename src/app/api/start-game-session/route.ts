@@ -1,39 +1,44 @@
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { randomUUID } from "crypto";
+import { cookies } from "next/headers";
 
 export async function POST(request: Request) {
   try {
+    const privy_token = (await cookies()).get("privy-token");
     const { walletAddress } = await request.json();
 
-    if (!walletAddress) {
+    if (!walletAddress || !privy_token) {
       return NextResponse.json(
-        { error: "Wallet address required" },
+        { message: "Unauthorized", success: false },
         { status: 400 }
       );
     }
 
     const sessionId = randomUUID();
 
-    const sessionToken = jwt.sign(
-      {
-        player: walletAddress,
-        sessionId,
-        iat: Math.floor(Date.now() / 1000),
-      },
-      process.env.JWT_SECRET!,
-      { expiresIn: "2h" } // Session expires in 2 hours
-    );
-
-    return NextResponse.json({
-      success: true,
-      sessionToken,
+    const payload = {
+      player: walletAddress,
       sessionId,
+      privy_token,
+    };
+
+    const sessionToken = jwt.sign(payload, process.env.JWT_SECRET!, {
+      expiresIn: "1h",
     });
+
+    return NextResponse.json(
+      {
+        success: true,
+        sessionToken,
+        sessionId,
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error creating game session:", error);
     return NextResponse.json(
-      { error: "Failed to create game session" },
+      { message: "Failed to create game session" },
       { status: 500 }
     );
   }

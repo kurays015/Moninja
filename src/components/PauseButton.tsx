@@ -15,11 +15,11 @@ export default function PauseButton({
 }: PauseButtonProps) {
   return (
     <>
-      {" "}
       {/* Manual Pause Toggle Button - Bottom Right */}
       {gameStarted && !gameOver && !bombHit && (
         <div className="absolute bottom-6 right-6 z-50">
           <button
+            onTouchEnd={onTogglePause}
             onClick={onTogglePause}
             className="w-14 h-14 bg-black/60 backdrop-blur-sm rounded-full border border-white/20 shadow-lg hover:bg-black/80 transition-all duration-200 flex items-center justify-center group"
             aria-label={gamePaused ? "Resume Game" : "Pause Game"}

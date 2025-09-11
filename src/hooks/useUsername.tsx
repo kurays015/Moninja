@@ -3,14 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { api, apiEndpoints } from "../lib/api";
-
-interface UsernameResponse {
-  hasUsername: boolean;
-  user?: {
-    username: string;
-  };
-  error?: string;
-}
+import { UsernameResponse } from "../types";
 
 export function useUsername(walletAddress: string | null) {
   const query = useQuery({

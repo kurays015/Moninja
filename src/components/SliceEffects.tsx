@@ -83,19 +83,46 @@ export default function SliceEffects({ sliceEffects }: SliceEffectsProps) {
               className="relative"
               style={{ width: effect.width ?? 80, height: effect.height ?? 80 }}
             >
-              {/* Main monad icon with spin & pulse */}
+              {/* Left half of monad */}
               <div
-                className="absolute inset-0"
+                className="absolute overflow-hidden"
                 style={{
-                  animation: "monadHit 0.6s ease-out forwards",
+                  left: 0,
+                  top: 0,
+                  width: (effect.width ?? 80) / 2,
+                  height: effect.height ?? 80,
+                  clipPath: "inset(0 50% 0 0)",
+                  animation: "monadHalfLeft 0.8s ease-out forwards",
                 }}
               >
                 <Image
                   src={effect.imageSrc ?? "/monad.svg"}
-                  alt="monad-slash"
+                  alt="monad-left"
                   width={effect.width ?? 80}
                   height={effect.height ?? 80}
-                  className="w-full h-full object-contain drop-shadow-[0_0_30px_purple]"
+                  className="object-contain drop-shadow-[0_0_20px_purple]"
+                  draggable={false}
+                />
+              </div>
+
+              {/* Right half of monad */}
+              <div
+                className="absolute overflow-hidden"
+                style={{
+                  right: 0,
+                  top: 0,
+                  width: (effect.width ?? 80) / 2,
+                  height: effect.height ?? 80,
+                  clipPath: "inset(0 0 0 50%)",
+                  animation: "monadHalfRight 0.8s ease-out forwards",
+                }}
+              >
+                <Image
+                  src={effect.imageSrc ?? "/monad.svg"}
+                  alt="monad-right"
+                  width={effect.width ?? 80}
+                  height={effect.height ?? 80}
+                  className="object-contain drop-shadow-[0_0_20px_purple]"
                   draggable={false}
                 />
               </div>
@@ -114,7 +141,6 @@ export default function SliceEffects({ sliceEffects }: SliceEffectsProps) {
                 style={{
                   left: "-8px",
                   top: (effect.height ?? 80) / 2 - 4,
-                  transform: `rotate(${effect.angle}deg)`,
                   boxShadow: "0 0 25px rgba(168, 85, 247, 1)",
                   animation: "monadSlashLine 0.4s ease-out forwards",
                 }}
@@ -125,15 +151,15 @@ export default function SliceEffects({ sliceEffects }: SliceEffectsProps) {
                 <div
                   key={i}
                   className="absolute w-2 h-2 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full"
-                  style={{
-                    left: "50%",
-                    top: "50%",
-                    transform: `translate(-50%, -50%) rotate(${
-                      i * 60
-                    }deg) translateY(-25px)`,
-                    animation: "monadParticle 0.6s ease-out forwards",
-                    animationDelay: `${i * 0.05}s`,
-                  }}
+                  style={
+                    {
+                      left: "50%",
+                      top: "50%",
+                      "--particle-angle": `${i * 60}deg`,
+                      animation: "monadParticle 0.6s ease-out forwards",
+                      animationDelay: `${i * 0.05}s`,
+                    } as React.CSSProperties
+                  }
                 />
               ))}
             </div>
