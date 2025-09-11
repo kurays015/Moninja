@@ -1249,24 +1249,7 @@ export default function Moninja() {
       gameArea.removeEventListener("mousedown", mouseDownHandler);
       document.removeEventListener("mousemove", mouseMoveHandler);
       document.removeEventListener("mouseup", handleEnd);
-      gameArea.removeEventListener("mouseleave", handleEnd);
-
-      gameArea.removeEventListener("touchstart", touchStartHandler);
-      gameArea.removeEventListener("touchmove", touchMoveHandler);
-      document.removeEventListener("touchend", touchEndHandler);
-      document.removeEventListener("touchcancel", touchEndHandler);
-    };
-  }, [eventHandlers]);
-
-  // Memoized game stats and functions
-  const gameStats: GameStats = useMemo(
-    () => ({
-      score: gameState.score,
-      objectsSliced: gameState.score,
-      speedLevel: Math.floor(gameState.score / 50) + 1,
-    }),
-    [gameState.score]
-  );
+ 
 
   const resetGame = useCallback(() => {
     setGameState({
