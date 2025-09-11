@@ -16,7 +16,7 @@ const account = privateKeyToAccount(privateKey);
 const walletClient = createWalletClient({
   account,
   chain: monadTestnet,
-  transport: http(),
+  transport: http(process.env.PRIVATE_RPC),
 });
 
 const aj = arcjet({
