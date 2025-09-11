@@ -234,7 +234,7 @@ export default function MonadAuth() {
     <div className="min-h-screen relative overflow-hidden">
       {/* Music Controls Overlay */}
       <div className="absolute bottom-4 left-4 volume-controls z-50">
-        <div className="bg-black/40 backdrop-blur-sm rounded-xl border border-white/20 shadow-lg p-3">
+        <div className="rounded-xl border border-white/20 shadow-lg p-3">
           <div className="flex items-center gap-3">
             {/* Volume Control */}
             <div className="relative">
@@ -315,7 +315,7 @@ export default function MonadAuth() {
 
             {/* Music Info */}
             <div className="text-white/80 text-sm flex items-center gap-3">
-              {isMusicPlaying ? (
+              {isMusicPlaying && (
                 <div className="flex items-center gap-1">
                   <div className="w-1 h-3 bg-green-400 rounded animate-pulse"></div>
                   <div
@@ -326,10 +326,7 @@ export default function MonadAuth() {
                     className="w-1 h-4 bg-green-400 rounded animate-pulse"
                     style={{ animationDelay: "0.4s" }}
                   ></div>
-                  <span className="ml-2 text-xs">Playing</span>
                 </div>
-              ) : (
-                <span className="text-xs text-gray-400">Paused</span>
               )}
               <FullscreenButton />
             </div>

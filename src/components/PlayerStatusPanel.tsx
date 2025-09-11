@@ -9,6 +9,7 @@ interface ResponsiveUserProfileProps {
   walletAddress: string | null;
   usernameData: UsernameResponse | undefined;
   playerScoreData: PlayerScoreResponse | undefined;
+  isScoreLoading: boolean;
 }
 
 export default function ResponsiveUserProfile({
@@ -16,6 +17,7 @@ export default function ResponsiveUserProfile({
   usernameData,
   walletAddress,
   playerScoreData,
+  isScoreLoading,
 }: ResponsiveUserProfileProps) {
   const { logout } = usePrivy();
 
@@ -116,10 +118,12 @@ export default function ResponsiveUserProfile({
                         <div className="border-t border-white/10 pt-1.5">
                           <div className="text-center">
                             <div className="text-sm font-bold text-white">
-                              {playerScoreData?.totalScore || 0}
+                              {isScoreLoading
+                                ? "Loading..."
+                                : playerScoreData?.totalScore || 0}
                             </div>
                             <div className="text-xs text-white/60">
-                              Total Score
+                              Total Scores
                             </div>
                           </div>
                         </div>

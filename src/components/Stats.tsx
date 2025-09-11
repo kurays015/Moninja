@@ -1,12 +1,9 @@
-import { GameStats } from "../types";
-
 interface StatsProps {
   gameStarted: boolean;
   score: number;
-  gameStats: GameStats;
 }
 
-export default function Stats({ gameStarted, score, gameStats }: StatsProps) {
+export default function Stats({ gameStarted, score }: StatsProps) {
   return (
     <>
       {gameStarted && (
@@ -16,9 +13,6 @@ export default function Stats({ gameStarted, score, gameStats }: StatsProps) {
               <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold sm:font-extrabold text-red-700 drop-shadow-md">
                 🍉{score}
               </span>
-              <div className="text-xs sm:text-sm text-amber-700 font-medium mt-1">
-                Level {gameStats.speedLevel}
-              </div>
             </div>
           </div>
         </div>

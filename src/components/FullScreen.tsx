@@ -114,17 +114,7 @@ export default function FullscreenButton() {
         className="flex items-center justify-center text-white rounded-lg font-medium"
         aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
       >
-        {isFullscreen ? (
-          <>
-            <Minimize size={20} />
-            <span className="text-gray-400 text-xs ml-2">Exit Fullscreen</span>
-          </>
-        ) : (
-          <>
-            <Fullscreen size={20} />
-            <span className="text-gray-400 text-xs ml-2">Fullscreen</span>
-          </>
-        )}
+        {isFullscreen ? <Minimize size={20} /> : <Fullscreen size={20} />}
       </button>
     </div>
   );

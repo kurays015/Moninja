@@ -1,4 +1,3 @@
-import FullscreenButton from "../components/FullScreen";
 import Leaderboard from "../components/Leaderboard";
 import MonadAuth from "../components/MonadAuth";
 

@@ -5,6 +5,9 @@ import { monadTestnet } from "viem/chains";
 import jwt from "jsonwebtoken";
 import { SessionData } from "@/src/types";
 import { CONTRACT_ABI } from "@/src/utils/abi";
+import { cookies } from "next/headers";
+import { updatePlayerDataSchema } from "@/src/schema/updatePlayerDataSchema";
+import arcjet, { tokenBucket } from "@arcjet/next";
 
 const privateKey = process.env.PRIVATE_KEY as `0x${string}`;
 const contractAddress = process.env.CONTRACT_ADDRESS as `0x${string}`;
@@ -16,44 +19,75 @@ const walletClient = createWalletClient({
   transport: http(),
 });
 
+const aj = arcjet({
+  key: process.env.ARCJET_KEY!, // Get your site key from https://app.arcjet.com
+  rules: [
+    // Create a token bucket rate limit. Other algorithms are supported.
+    tokenBucket({
+      mode: "LIVE",
+      characteristics: ["userId"],
+      refillRate: 10, // refill 10 tokens per interval
+      interval: 60, // refill every minute
+      capacity: 100, // allow burst of up to 100 requests
+    }),
+  ],
+});
+
 export async function POST(request: Request) {
   try {
+    const privy_token = (await cookies()).get("privy-token");
+
     const { player, scoreAmount, transactionAmount, sessionId } =
       await request.json();
 
-    if (!player) {
-      return NextResponse.json(
-        { error: "No monad games id walletAddress yet." },
-        { status: 400 }
-      );
+    const decision = await aj.protect(request, {
+      userId: player || privy_token,
+      requested: 1,
+    }); // Deduct 5 tokens from the bucket
+
+    if (decision.isDenied()) {
+      //rate limited
+      if (decision.reason.isRateLimit()) {
+        return NextResponse.json(
+          { error: "Too Many Requests", reason: decision.reason },
+          { status: 429 }
+        );
+        //bot
+      } else if (decision.reason.isBot()) {
+        return NextResponse.json(
+          { error: "No bots allowed", reason: decision.reason },
+          { status: 403 }
+        );
+        //others
+      } else {
+        return NextResponse.json(
+          { error: "Forbidden", reason: decision.reason },
+          { status: 403 }
+        );
+      }
+    }
+
+    const validatedData = updatePlayerDataSchema.safeParse({
+      player,
+      scoreAmount,
+      transactionAmount,
+      sessionId,
+    });
+
+    if (!player || !privy_token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 400 });
     }
 
     // 1. VALIDATE INPUT
-    if (
-      !player ||
-      typeof scoreAmount !== "number" ||
-      typeof transactionAmount !== "number" ||
-      !sessionId
-    ) {
-      return NextResponse.json(
-        { error: "Invalid input parameters" },
-        { status: 400 }
-      );
-    }
-
-    // Validate score and transaction amounts are positive
-    if (scoreAmount <= 0 || transactionAmount <= 0) {
-      return NextResponse.json(
-        { error: "Score and transaction amounts must be positive" },
-        { status: 400 }
-      );
+    if (!validatedData.success) {
+      return NextResponse.json({ message: "Invalid Input" }, { status: 400 });
     }
 
     // 2. VALIDATE SESSION TOKEN
     const authHeader = request.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json(
-        { error: "No valid session token provided" },
+        { message: "No valid session token provided" },
         { status: 401 }
       );
     }
@@ -71,7 +105,7 @@ export async function POST(request: Request) {
     } catch (err) {
       console.error("JWT verification failed:", err);
       return NextResponse.json(
-        { error: "Invalid or expired session" },
+        { message: "Invalid or expired session" },
         { status: 401 }
       );
     }
@@ -80,7 +114,7 @@ export async function POST(request: Request) {
     if (!process.env.PRIVATE_KEY || !process.env.CONTRACT_ADDRESS) {
       console.error("Missing required environment variables");
       return NextResponse.json(
-        { error: "Server configuration error" },
+        { message: "Server configuration error" },
         { status: 500 }
       );
     }
@@ -104,7 +138,6 @@ export async function POST(request: Request) {
         scoreAmount,
         transactionAmount,
         transactionHash: hash,
-        sessionId,
       });
 
       return NextResponse.json({
@@ -122,7 +155,7 @@ export async function POST(request: Request) {
 
         if (errorMessage.includes("insufficient funds")) {
           return NextResponse.json(
-            { error: "Insufficient funds to complete transaction" },
+            { message: "Insufficient funds to complete transaction" },
             { status: 400 }
           );
         }
@@ -130,7 +163,7 @@ export async function POST(request: Request) {
         if (errorMessage.includes("execution reverted")) {
           return NextResponse.json(
             {
-              error:
+              message:
                 "Contract execution failed - check if wallet has GAME_ROLE permission",
             },
             { status: 400 }
@@ -139,21 +172,21 @@ export async function POST(request: Request) {
 
         if (errorMessage.includes("nonce")) {
           return NextResponse.json(
-            { error: "Transaction nonce error - please try again" },
+            { message: "Transaction nonce error - please try again" },
             { status: 429 }
           );
         }
 
         if (errorMessage.includes("gas")) {
           return NextResponse.json(
-            { error: "Gas estimation failed - check contract parameters" },
+            { message: "Gas estimation failed - check contract parameters" },
             { status: 400 }
           );
         }
       }
 
       return NextResponse.json(
-        { error: "Blockchain transaction failed" },
+        { message: "Blockchain transaction failed" },
         { status: 500 }
       );
     }
@@ -167,6 +200,6 @@ export async function POST(request: Request) {
         ? error.message
         : "Failed to process score submission";
 
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    return NextResponse.json({ message: errorMessage }, { status: 500 });
   }
 }
