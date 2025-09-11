@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   ComboEffect,
   GameObject,
+  GameState,
   GameStats,
   SlashPoint,
   SliceEffect,
@@ -27,85 +28,14 @@ import PauseButton from "./PauseButton";
 import { toast } from "react-toastify";
 import TransactionToast from "./TransactionToast";
 import ResponsiveUserProfile from "./PlayerStatusPanel";
-
-// Constants moved outside component to prevent recreation
-const MONANIMAL_IMAGES = [
-  "4ksalmonad.png",
-  "Chog.png",
-  "cutlandak2.png",
-  "fish_nad.png",
-  "molandak_skilly.PNG",
-  "MolandakHD.png",
-];
-
-const GAME_CONFIG = {
-  BASE_SPAWN_INTERVAL: 2500,
-  MIN_SPAWN_INTERVAL: 1200,
-  SPEED_INCREASE_PER_50_POINTS: 200,
-  FRENZY_DURATION: 5000,
-  FRENZY_WAVE_INTERVAL: 600, // Slightly increased for smoother performance
-  FRENZY_WAVE_SIZE: { min: 4, max: 7 }, // Reduced from 6-12 for fewer objects
-  NORMAL_WAVE_SIZE: { min: 2, max: 4 },
-  BOMB_CHANCE_BASE: 0.15,
-  BOMB_CHANCE_MAX: 0.4,
-  BOMB_CHANCE_INCREASE: 0.002,
-  MONAD_CHANCE: 0.4,
-  FRENZY_TRIGGER_INTERVAL: 10,
-  FRENZY_TRIGGER_CHANCE: 0.6,
-  COLLISION_DISTANCE: 60,
-  MIN_SPACING: 120,
-  FRENZY_MIN_SPACING: 100, // Increased spacing for better distribution
-  SLICE_SOUND_THROTTLE: 50,
-  MAX_TRAIL_POINTS: 25,
-  MOVEMENT_THRESHOLD: 2,
-  SUBMIT_DEBOUNCE: 2000,
-};
-
-// Object pool for better memory management during frenzy
-class ObjectPool<T> {
-  private pool: T[] = [];
-  private createFn: () => T;
-
-  constructor(createFn: () => T, initialSize = 20) {
-    this.createFn = createFn;
-    // Pre-allocate objects
-    for (let i = 0; i < initialSize; i++) {
-      this.pool.push(createFn());
-    }
-  }
-
-  get(): T {
-    return this.pool.pop() || this.createFn();
-  }
-
-  release(obj: T): void {
-    if (this.pool.length < 50) {
-      // Cap pool size
-      this.pool.push(obj);
-    }
-  }
-}
-
-// Game state manager to reduce useState calls
-interface GameState {
-  score: number;
-  localScore: number;
-  submittedScore: number;
-  gameOver: boolean;
-  gameStarted: boolean;
-  gamePaused: boolean;
-  bombHit: boolean;
-  gameEnded: boolean;
-  isSlashing: boolean;
-  isMonadSlashing: boolean;
-  monadSlashCount: number;
-  frenzyMode: boolean;
-  frenzyTimeRemaining: number;
-  isSubmitting: boolean;
-}
+import { ObjectPool } from "../lib/ObjectPool";
+import { MONANIMAL_IMAGES } from "../lib/monanimalsmages";
+import { calculateObjectSpeed } from "../lib/calculateObjectSpeed";
+import { GAME_CONFIG } from "../lib/gameConfig";
+import getRandomSpeed from "../lib/getRandomSpeed";
 
 export default function Moninja() {
-  // Consolidated game state
+  //game state
   const [gameState, setGameState] = useState<GameState>({
     score: 0,
     localScore: 0,
@@ -136,6 +66,8 @@ export default function Moninja() {
   const [gameSessionId, setGameSessionId] = useState<string | null>(null);
 
   // Refs
+  const mountedRef = useRef(true);
+  const frameCountRef = useRef(0);
   const gameAreaRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number | null>(null);
   const timersRef = useRef<{
@@ -211,24 +143,36 @@ export default function Moninja() {
 
   // Optimized state update functions
   const updateGameState = useCallback((updates: Partial<GameState>) => {
+    // FIX: Check if component is still mounted
+    if (!mountedRef.current) return;
     setGameState(prev => ({ ...prev, ...updates }));
   }, []);
 
   // Clear all timers utility
   const clearAllTimers = useCallback(() => {
-    Object.values(timersRef.current).forEach(timer => {
-      if (timer) clearTimeout(timer);
-    });
-    timersRef.current = {
-      spawnInterval: null,
-      frenzyTimer: null,
-      frenzyWaveTimer: null,
-      submitTimeout: null,
-      frenzyCountdown: null,
-    };
+    if (timersRef.current.spawnInterval) {
+      clearInterval(timersRef.current.spawnInterval);
+      timersRef.current.spawnInterval = null;
+    }
+    if (timersRef.current.frenzyTimer) {
+      clearTimeout(timersRef.current.frenzyTimer);
+      timersRef.current.frenzyTimer = null;
+    }
+    if (timersRef.current.frenzyWaveTimer) {
+      clearTimeout(timersRef.current.frenzyWaveTimer);
+      timersRef.current.frenzyWaveTimer = null;
+    }
+    if (timersRef.current.submitTimeout) {
+      clearTimeout(timersRef.current.submitTimeout);
+      timersRef.current.submitTimeout = null;
+    }
+    if (timersRef.current.frenzyCountdown) {
+      clearInterval(timersRef.current.frenzyCountdown);
+      timersRef.current.frenzyCountdown = null;
+    }
   }, []);
 
-  // Optimized object creation with pooling - STABLE FUNCTION
+  //create object
   const createObject = useCallback(
     (
       startX: number,
@@ -247,6 +191,17 @@ export default function Moninja() {
         ? "monad.svg"
         : MONANIMAL_IMAGES[Math.floor(Math.random() * MONANIMAL_IMAGES.length)];
 
+      // Calculate speed based on current score and game mode
+      const currentScore = gameStateRef.current.score;
+      const speedConfig = calculateObjectSpeed(currentScore, frenzyMode);
+
+      // Generate random speeds within the calculated ranges
+      const velocityX =
+        (Math.random() - 0.5) * getRandomSpeed(speedConfig.horizontalSpeed);
+      const velocityY = -getRandomSpeed(speedConfig.verticalSpeed);
+      const rotationSpeed =
+        (Math.random() - 0.5) * getRandomSpeed(speedConfig.rotationSpeed);
+
       const obj: GameObject = {
         ...pooledObj,
         id: Date.now() + Math.random(),
@@ -254,15 +209,12 @@ export default function Moninja() {
         fruitName,
         x: startX,
         y: (rect ? rect.height : window.innerHeight) - 80,
-        velocityX: (Math.random() - 0.5) * (frenzyMode ? 12 : 8),
-        velocityY: -(
-          Math.random() * (frenzyMode ? 8 : 6) +
-          (frenzyMode ? 15 : 12)
-        ),
+        velocityX,
+        velocityY,
         rotation: 0,
-        rotationSpeed: (Math.random() - 0.5) * (frenzyMode ? 15 : 10),
+        rotationSpeed,
         sliced: false,
-        gravity: frenzyMode ? 0.3 : 0.4,
+        gravity: speedConfig.gravity,
         slashCount: isMonad ? 0 : undefined,
         maxSlashCount: isMonad ? 10 : undefined,
         pointsPerSlash: isMonad ? 20 : undefined,
@@ -287,6 +239,8 @@ export default function Moninja() {
   // Batch score submission with debouncing
   const submitScoreBatch = useCallback(
     async (finalScore?: number) => {
+      if (!mountedRef.current) return; // FIX: Check if mounted
+
       const scoreToSubmit = finalScore || gameStateRef.current.localScore;
       const scoreDifference =
         scoreToSubmit - gameStateRef.current.submittedScore;
@@ -298,6 +252,11 @@ export default function Moninja() {
       try {
         const data: SubmitScoreResponse = await new Promise(
           (resolve, reject) => {
+            // FIX: Add timeout to prevent hanging
+            const timeoutId = setTimeout(() => {
+              reject(new Error("Score submission timeout"));
+            }, 10000); // 10 second timeout
+
             submitScore.mutate(
               {
                 player: walletAddress!,
@@ -305,33 +264,56 @@ export default function Moninja() {
                 scoreAmount: scoreDifference,
                 sessionId: gameSessionId!,
               },
-              { onSuccess: resolve, onError: reject }
+              {
+                onSuccess: data => {
+                  clearTimeout(timeoutId);
+                  resolve(data);
+                },
+                onError: error => {
+                  clearTimeout(timeoutId);
+                  reject(error);
+                },
+              }
             );
           }
         );
 
-        updateGameState({
-          submittedScore: scoreToSubmit,
-          isSubmitting: false,
-        });
+        if (mountedRef.current) {
+          updateGameState({
+            submittedScore: scoreToSubmit,
+            isSubmitting: false,
+          });
 
-        toast(<TransactionToast transactionsInfo={data} />, {
-          autoClose: 4000,
-          closeOnClick: false,
-          pauseOnHover: true,
-          draggable: false,
-          style: {
-            background: "rgba(17, 24, 39, 0.95)",
-            border: "1px solid rgba(59, 130, 246, 0.2)",
-            borderRadius: "8px",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-            padding: "0",
-            margin: "0",
-          },
-        });
+          toast(<TransactionToast transactionsInfo={data} />, {
+            autoClose: 4000,
+            closeOnClick: false,
+            pauseOnHover: true,
+            draggable: false,
+            style: {
+              background: "rgba(17, 24, 39, 0.95)",
+              border: "1px solid rgba(59, 130, 246, 0.2)",
+              borderRadius: "8px",
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+              padding: "0",
+              margin: "0",
+            },
+          });
+        }
       } catch (error) {
         console.error("Error submitting score batch:", error);
-        updateGameState({ isSubmitting: false });
+        if (mountedRef.current) {
+          updateGameState({ isSubmitting: false });
+        }
+
+        // FIX: Add retry logic
+        if (!finalScore) {
+          // Don't retry final scores to avoid duplicates
+          setTimeout(() => {
+            if (mountedRef.current) {
+              submitScoreBatch();
+            }
+          }, 5000); // Retry after 5 seconds
+        }
       }
     },
     [walletAddress, gameSessionId, submitScore, updateGameState]
@@ -490,7 +472,13 @@ export default function Moninja() {
         clearTimeout(timersRef.current.frenzyWaveTimer);
       }
     }, GAME_CONFIG.FRENZY_DURATION);
-  }, [updateGameState, playSound, clearAllTimers, createFrenzyWave]);
+  }, [
+    updateGameState,
+    playSound,
+    clearAllTimers,
+    createFrenzyWave,
+    hasVisibleBombOrMonad,
+  ]);
 
   // STABLE OBJECT WAVE CREATION FUNCTION
   const createObjectWave = useCallback(() => {
@@ -602,6 +590,7 @@ export default function Moninja() {
     gameState.frenzyMode,
     gameState.score,
     createObjectWave,
+    timersRef.current,
   ]);
 
   // Start button creation effect
@@ -727,13 +716,17 @@ export default function Moninja() {
     };
   }, [gameState.gameStarted, gameState.gameOver, updateGameState]);
 
-  // Collision detection and game logic (rest of the component remains the same)
+  //slash collisions
   const checkSlashCollisions = useCallback(() => {
+    frameCountRef.current++;
+    if (frameCountRef.current % 2 !== 0) return; // Only check every other frame
+
     if (
       slashPath.length < 2 ||
       gameStateRef.current.gamePaused ||
       gameStateRef.current.bombHit ||
-      !usernameData?.hasUsername
+      !usernameData?.hasUsername ||
+      !mountedRef.current // FIX: Check if mounted
     )
       return;
 
@@ -774,19 +767,23 @@ export default function Moninja() {
             Math.PI,
         };
 
-        setSliceEffects(prev => [...prev, watermelonSliceEffect]);
+        if (mountedRef.current) {
+          setSliceEffects(prev => [...prev, watermelonSliceEffect]);
 
-        // Remove slice effect after animation
-        setTimeout(() => {
-          setSliceEffects(prev =>
-            prev.filter(effect => effect.id !== watermelonSliceEffect.id)
-          );
-        }, 1200);
+          // Remove slice effect after animation
+          setTimeout(() => {
+            if (mountedRef.current) {
+              setSliceEffects(prev =>
+                prev.filter(effect => effect.id !== watermelonSliceEffect.id)
+              );
+            }
+          }, 1200);
 
-        setStartButton(prev => (prev ? { ...prev, sliced: true } : null));
-        updateGameState({ gameStarted: true });
-        setSlashPath([]);
-        updateGameState({ isSlashing: false });
+          setStartButton(prev => (prev ? { ...prev, sliced: true } : null));
+          updateGameState({ gameStarted: true });
+          setSlashPath([]);
+          updateGameState({ isSlashing: false });
+        }
 
         if (!gameStateRef.current.gamePaused) {
           playSound("start");
@@ -795,8 +792,19 @@ export default function Moninja() {
       }
     }
 
+    // FIX: Optimize collision detection - pre-filter objects
+    const lastPoint = slashPath[slashPath.length - 1];
+    const slashBounds = {
+      minX: Math.min(...slashPath.map(p => p.x)) - 50,
+      maxX: Math.max(...slashPath.map(p => p.x)) + 50,
+      minY: Math.min(...slashPath.map(p => p.y)) - 50,
+      maxY: Math.max(...slashPath.map(p => p.y)) + 50,
+    };
+
     // Optimized object collision detection
     setObjects(prevObjects => {
+      if (!mountedRef.current) return prevObjects;
+
       const newObjects = [...prevObjects];
       const newSliceEffects: SliceEffect[] = [];
       let pointsEarned = 0;
@@ -805,8 +813,18 @@ export default function Moninja() {
         const obj = newObjects[objIndex];
         if (obj.sliced) continue;
 
+        // FIX: Pre-filter objects outside slash bounds for performance
+        if (
+          obj.x > slashBounds.maxX ||
+          obj.x + 80 < slashBounds.minX ||
+          obj.y > slashBounds.maxY ||
+          obj.y + 80 < slashBounds.minY
+        ) {
+          continue;
+        }
+
         // Use last few points of slash path for collision (more efficient)
-        const checkPoints = slashPath.slice(-5);
+        const checkPoints = slashPath.slice(-3); // FIX: Reduced from 5 to 3 points
         let collided = false;
 
         for (const point of checkPoints) {
@@ -823,7 +841,6 @@ export default function Moninja() {
 
         if (!collided) continue;
 
-        const lastPoint = slashPath[slashPath.length - 1];
         const secondLastPoint = slashPath[slashPath.length - 2] || lastPoint;
 
         // Handle different object types
@@ -853,9 +870,8 @@ export default function Moninja() {
               );
             }
 
-            // ADD THIS BACK - Create monad slice effects!
+            // Create monad slice effects
             if (newSlashCount >= maxSlashCount) {
-              // Final monad destruction - create explosion effect
               newSliceEffects.push({
                 id: Date.now() + Math.random(),
                 x: obj.x,
@@ -874,7 +890,6 @@ export default function Moninja() {
               });
               updateGameState({ isMonadSlashing: false, monadSlashCount: 0 });
             } else {
-              // Regular monad slash effect
               newSliceEffects.push({
                 id: Date.now() + Math.random(),
                 x: obj.x,
@@ -905,7 +920,11 @@ export default function Moninja() {
             if (!gameStateRef.current.gamePaused) {
               stopBombSound(obj.id.toString());
               playSound("bomb-explode");
-              setTimeout(() => playSound("game-over"), 2000);
+              setTimeout(() => {
+                if (mountedRef.current) {
+                  playSound("game-over");
+                }
+              }, 2000);
             }
           } else {
             pointsEarned += 1;
@@ -939,7 +958,7 @@ export default function Moninja() {
       }
 
       // Handle combo effects
-      if (slashHitsThisFrame >= 3) {
+      if (slashHitsThisFrame >= 3 && mountedRef.current) {
         const comboEffect: ComboEffect = {
           id: Date.now(),
           x: slashCenterX / slashHitsThisFrame,
@@ -954,25 +973,29 @@ export default function Moninja() {
         }
 
         setTimeout(() => {
-          setComboEffects(prev => prev.filter(e => e.id !== comboEffect.id));
+          if (mountedRef.current) {
+            setComboEffects(prev => prev.filter(e => e.id !== comboEffect.id));
+          }
         }, 2000);
       }
 
       // Add slice effects
-      if (newSliceEffects.length > 0) {
+      if (newSliceEffects.length > 0 && mountedRef.current) {
         setSliceEffects(prev => [...prev, ...newSliceEffects]);
         setTimeout(() => {
-          setSliceEffects(prev =>
-            prev.filter(
-              effect =>
-                !newSliceEffects.some(newEffect => newEffect.id === effect.id)
-            )
-          );
+          if (mountedRef.current) {
+            setSliceEffects(prev =>
+              prev.filter(
+                effect =>
+                  !newSliceEffects.some(newEffect => newEffect.id === effect.id)
+              )
+            );
+          }
         }, 1200);
       }
 
       // Handle bomb hit
-      if (hitBomb) {
+      if (hitBomb && mountedRef.current) {
         updateGameState({
           bombHit: true,
           isMonadSlashing: false,
@@ -982,9 +1005,11 @@ export default function Moninja() {
         });
         clearAllTimers();
         setTimeout(() => {
-          updateGameState({ gameOver: true });
-          setObjects([]);
-          setSliceEffects([]);
+          if (mountedRef.current) {
+            updateGameState({ gameOver: true });
+            setObjects([]);
+            setSliceEffects([]);
+          }
         }, 2000);
       }
 

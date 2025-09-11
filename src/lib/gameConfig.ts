@@ -1,0 +1,50 @@
+export const GAME_CONFIG = {
+  BASE_SPAWN_INTERVAL: 2500,
+  MIN_SPAWN_INTERVAL: 1200,
+  SPEED_INCREASE_PER_50_POINTS: 200,
+  FRENZY_DURATION: 5000,
+  FRENZY_WAVE_INTERVAL: 600,
+  FRENZY_WAVE_SIZE: { min: 4, max: 7 },
+  NORMAL_WAVE_SIZE: { min: 2, max: 4 },
+  BOMB_CHANCE_BASE: 0.15,
+  BOMB_CHANCE_MAX: 0.4,
+  BOMB_CHANCE_INCREASE: 0.002,
+  MONAD_CHANCE: 0.4,
+  FRENZY_TRIGGER_INTERVAL: 10,
+  FRENZY_TRIGGER_CHANCE: 0.6,
+  COLLISION_DISTANCE: 60,
+  MIN_SPACING: 120,
+  FRENZY_MIN_SPACING: 100,
+  SLICE_SOUND_THROTTLE: 50,
+  MAX_TRAIL_POINTS: 25,
+  MOVEMENT_THRESHOLD: 2,
+  SUBMIT_DEBOUNCE: 5000,
+
+  // NEW OBJECT SPEED CONFIGURATION
+  OBJECT_SPEED: {
+    // Initial speed settings (slower than normal)
+    INITIAL_HORIZONTAL_SPEED: { min: 3, max: 6 },
+    INITIAL_VERTICAL_SPEED: { min: 8, max: 10 },
+    INITIAL_ROTATION_SPEED: { min: 3, max: 6 },
+    INITIAL_GRAVITY: 0.25,
+
+    // Normal speed settings (target speed)
+    NORMAL_HORIZONTAL_SPEED: { min: 6, max: 12 },
+    NORMAL_VERTICAL_SPEED: { min: 12, max: 18 },
+    NORMAL_ROTATION_SPEED: { min: 8, max: 15 },
+    NORMAL_GRAVITY: 0.4,
+
+    // Frenzy mode speed settings (faster than normal)
+    FRENZY_HORIZONTAL_SPEED: { min: 8, max: 16 },
+    FRENZY_VERTICAL_SPEED: { min: 15, max: 22 },
+    FRENZY_ROTATION_SPEED: { min: 12, max: 20 },
+    FRENZY_GRAVITY: 0.3,
+
+    // Speed progression settings
+    SPEED_PROGRESSION: {
+      POINTS_TO_NORMAL_SPEED: 100,
+      SPEED_INCREASE_INTERVAL: 10,
+      MAX_SPEED_MULTIPLIER: 1.5,
+    },
+  },
+} as const;

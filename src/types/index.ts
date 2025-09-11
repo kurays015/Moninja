@@ -118,3 +118,20 @@ export interface UsernameResponse {
 export interface PlayerScoreResponse {
   totalScore: number;
 }
+
+export interface GameState {
+  score: number;
+  localScore: number;
+  submittedScore: number;
+  gameOver: boolean;
+  gameStarted: boolean;
+  gamePaused: boolean;
+  bombHit: boolean;
+  gameEnded: boolean;
+  isSlashing: boolean;
+  isMonadSlashing: boolean;
+  monadSlashCount: number;
+  frenzyMode: boolean;
+  frenzyTimeRemaining: number;
+  isSubmitting: boolean;
+}

@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     const decision = await aj.protect(request, {
       userId: player || privy_token,
       requested: 1,
-    }); // Deduct 5 tokens from the bucket
+    }); // Deduct 1 tokens from the bucket
 
     if (decision.isDenied()) {
       //rate limited
