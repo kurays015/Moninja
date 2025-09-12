@@ -217,7 +217,7 @@ export default function Moninja() {
         gravity: speedConfig.gravity,
         slashCount: isMonad ? 0 : undefined,
         maxSlashCount: isMonad ? 10 : undefined,
-        pointsPerSlash: isMonad ? 20 : undefined,
+        pointsPerSlash: isMonad ? 5 : undefined,
       };
 
       // Play sound only if not paused
@@ -861,7 +861,7 @@ export default function Moninja() {
             }
 
             updateGameState({ monadSlashCount: newSlashCount });
-            const pointsPerSlash = obj.pointsPerSlash || 20;
+            const pointsPerSlash = obj.pointsPerSlash || 5;
             pointsEarned += pointsPerSlash;
 
             if (!gameStateRef.current.gamePaused) {
