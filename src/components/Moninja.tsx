@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   ComboEffect,
   GameObject,
+  GameState,
   GameStats,
   SlashPoint,
   SliceEffect,
@@ -27,82 +28,10 @@ import PauseButton from "./PauseButton";
 import { toast } from "react-toastify";
 import TransactionToast from "./TransactionToast";
 import ResponsiveUserProfile from "./PlayerStatusPanel";
-
-// Constants moved outside component to prevent recreation
-const MONANIMAL_IMAGES = [
-  "4ksalmonad.png",
-  "Chog.png",
-  "cutlandak2.png",
-  "fish_nad.png",
-  "molandak_skilly.PNG",
-  "MolandakHD.png",
-];
-
-const GAME_CONFIG = {
-  BASE_SPAWN_INTERVAL: 2500,
-  MIN_SPAWN_INTERVAL: 1200,
-  SPEED_INCREASE_PER_50_POINTS: 200,
-  FRENZY_DURATION: 5000,
-  FRENZY_WAVE_INTERVAL: 600, // Slightly increased for smoother performance
-  FRENZY_WAVE_SIZE: { min: 4, max: 7 }, // Reduced from 6-12 for fewer objects
-  NORMAL_WAVE_SIZE: { min: 2, max: 4 },
-  BOMB_CHANCE_BASE: 0.15,
-  BOMB_CHANCE_MAX: 0.4,
-  BOMB_CHANCE_INCREASE: 0.002,
-  MONAD_CHANCE: 0.4,
-  FRENZY_TRIGGER_INTERVAL: 10,
-  FRENZY_TRIGGER_CHANCE: 0.6,
-  COLLISION_DISTANCE: 60,
-  MIN_SPACING: 120,
-  FRENZY_MIN_SPACING: 100, // Increased spacing for better distribution
-  SLICE_SOUND_THROTTLE: 50,
-  MAX_TRAIL_POINTS: 25,
-  MOVEMENT_THRESHOLD: 2,
-  SUBMIT_DEBOUNCE: 2000,
-};
-
-// Object pool for better memory management during frenzy
-class ObjectPool<T> {
-  private pool: T[] = [];
-  private createFn: () => T;
-
-  constructor(createFn: () => T, initialSize = 20) {
-    this.createFn = createFn;
-    // Pre-allocate objects
-    for (let i = 0; i < initialSize; i++) {
-      this.pool.push(createFn());
-    }
-  }
-
-  get(): T {
-    return this.pool.pop() || this.createFn();
-  }
-
-  release(obj: T): void {
-    if (this.pool.length < 50) {
-      // Cap pool size
-      this.pool.push(obj);
-    }
-  }
-}
-
-// Game state manager to reduce useState calls
-interface GameState {
-  score: number;
-  localScore: number;
-  submittedScore: number;
-  gameOver: boolean;
-  gameStarted: boolean;
-  gamePaused: boolean;
-  bombHit: boolean;
-  gameEnded: boolean;
-  isSlashing: boolean;
-  isMonadSlashing: boolean;
-  monadSlashCount: number;
-  frenzyMode: boolean;
-  frenzyTimeRemaining: number;
-  isSubmitting: boolean;
-}
+import { ObjectPool } from "../lib/ObjectPool";
+import { MONANIMAL_IMAGES } from "../lib/monanimalsImages";
+import { getSpeedMultiplier } from "../lib/getSpeedMultiplier";
+import { GAME_CONFIG } from "../lib/gameConfig";
 
 export default function Moninja() {
   // Consolidated game state
@@ -228,7 +157,7 @@ export default function Moninja() {
     };
   }, []);
 
-  // Optimized object creation with pooling - STABLE FUNCTION
+  // Updated createObject function with progressive speed and mobile landscape fix
   const createObject = useCallback(
     (
       startX: number,
@@ -247,6 +176,60 @@ export default function Moninja() {
         ? "monad.svg"
         : MONANIMAL_IMAGES[Math.floor(Math.random() * MONANIMAL_IMAGES.length)];
 
+      // Calculate speed multiplier based on current score
+      const speedMultiplier = getSpeedMultiplier(gameStateRef.current.score);
+
+      // Detect landscape mode and adjust velocities accordingly
+      const screenWidth = window.innerWidth;
+      const screenHeight = window.innerHeight;
+      const isLandscape = screenWidth > screenHeight;
+      const isMobile = screenWidth <= 768; // Typical mobile breakpoint
+      const isLandscapeMobile = isLandscape && isMobile;
+
+      // Set base speeds based on orientation
+      let baseVelocityX = GAME_CONFIG.BASE_VELOCITY_X;
+      let baseVelocityY, maxVelocityY;
+
+      if (isLandscapeMobile) {
+        // Use specific mobile landscape values
+        baseVelocityY = GAME_CONFIG.MOBILE_LANDSCAPE_BASE_VELOCITY_Y;
+        maxVelocityY = GAME_CONFIG.MOBILE_LANDSCAPE_MAX_VELOCITY_Y;
+        baseVelocityX *= 1.1; // Slightly increase horizontal movement
+      } else {
+        // Use normal values for portrait and desktop
+        baseVelocityY = GAME_CONFIG.BASE_VELOCITY_Y;
+        maxVelocityY = GAME_CONFIG.MAX_VELOCITY_Y;
+
+        if (isLandscape && !isMobile) {
+          baseVelocityY *= 0.75; // Moderate reduction for landscape desktop
+        }
+      }
+
+      const baseRotationSpeed = GAME_CONFIG.BASE_ROTATION_SPEED;
+
+      // Apply speed multiplier with adjusted base speeds
+      const velocityXRange = Math.min(
+        GAME_CONFIG.MAX_VELOCITY_X,
+        baseVelocityX * speedMultiplier
+      );
+      const velocityYRange = Math.min(
+        maxVelocityY,
+        baseVelocityY * speedMultiplier
+      );
+      const rotationSpeedRange = Math.min(
+        GAME_CONFIG.MAX_ROTATION_SPEED,
+        baseRotationSpeed * speedMultiplier
+      );
+
+      // Frenzy mode gets additional speed boost
+      const frenzyMultiplier = frenzyMode ? 1.3 : 1.0;
+
+      // Adjust gravity based on screen orientation for better arc control
+      let gravity = frenzyMode ? 0.25 : 0.35;
+      if (isLandscapeMobile) {
+        gravity *= 1.2; // Increase gravity in landscape to bring objects down faster
+      }
+
       const obj: GameObject = {
         ...pooledObj,
         id: Date.now() + Math.random(),
@@ -254,18 +237,18 @@ export default function Moninja() {
         fruitName,
         x: startX,
         y: (rect ? rect.height : window.innerHeight) - 80,
-        velocityX: (Math.random() - 0.5) * (frenzyMode ? 12 : 8),
-        velocityY: -(
-          Math.random() * (frenzyMode ? 8 : 6) +
-          (frenzyMode ? 15 : 12)
-        ),
+        velocityX: (Math.random() - 0.5) * velocityXRange * frenzyMultiplier,
+        velocityY:
+          -(Math.random() * (velocityYRange * 0.5) + velocityYRange) *
+          frenzyMultiplier,
         rotation: 0,
-        rotationSpeed: (Math.random() - 0.5) * (frenzyMode ? 15 : 10),
+        rotationSpeed:
+          (Math.random() - 0.5) * rotationSpeedRange * frenzyMultiplier,
         sliced: false,
-        gravity: frenzyMode ? 0.3 : 0.4,
+        gravity: gravity,
         slashCount: isMonad ? 0 : undefined,
         maxSlashCount: isMonad ? 10 : undefined,
-        pointsPerSlash: isMonad ? 20 : undefined,
+        pointsPerSlash: isMonad ? 5 : undefined,
       };
 
       // Play sound only if not paused
@@ -407,29 +390,31 @@ export default function Moninja() {
     });
   }, [createObject, hasVisibleBombOrMonad]);
 
-  // 3. More controlled frenzy management with performance optimization
+  // 3. Fixed frenzy management with proper trigger detection
   const manageFrenzyMode = useCallback(() => {
     const { score, frenzyMode, gamePaused, bombHit } = gameStateRef.current;
 
-    // Check if should trigger frenzy
+    // Check if should trigger frenzy - use multiple of check instead of exact match
     const shouldTriggerFrenzy =
-      score > 0 &&
-      score % GAME_CONFIG.FRENZY_TRIGGER_INTERVAL === 0 &&
+      score >= GAME_CONFIG.FRENZY_TRIGGER_INTERVAL && // Must have minimum score
+      score % GAME_CONFIG.FRENZY_TRIGGER_INTERVAL === 0 && // Multiple of trigger interval
       !frenzyMode &&
+      !bombHit &&
       Math.random() < GAME_CONFIG.FRENZY_TRIGGER_CHANCE;
 
-    if (!shouldTriggerFrenzy || bombHit) return;
+    if (!shouldTriggerFrenzy) return;
 
-    console.log("Starting frenzy mode");
+    console.log("Starting frenzy mode at score:", score);
     updateGameState({
       frenzyMode: true,
       frenzyTimeRemaining: GAME_CONFIG.FRENZY_DURATION,
     });
 
     if (!gamePaused) {
-      playSound("frenzy-start");
+      playSound("combo"); // Use combo sound since frenzy-start might not exist
     }
 
+    // Don't start frenzy if there are bombs/monads on screen
     if (hasVisibleBombOrMonad) return;
 
     setFrenzyNotification("MONANIMAL FRENZY!");
@@ -490,7 +475,13 @@ export default function Moninja() {
         clearTimeout(timersRef.current.frenzyWaveTimer);
       }
     }, GAME_CONFIG.FRENZY_DURATION);
-  }, [updateGameState, playSound, clearAllTimers, createFrenzyWave]);
+  }, [
+    updateGameState,
+    playSound,
+    clearAllTimers,
+    createFrenzyWave,
+    hasVisibleBombOrMonad,
+  ]);
 
   // STABLE OBJECT WAVE CREATION FUNCTION
   const createObjectWave = useCallback(() => {
@@ -844,7 +835,7 @@ export default function Moninja() {
             }
 
             updateGameState({ monadSlashCount: newSlashCount });
-            const pointsPerSlash = obj.pointsPerSlash || 20;
+            const pointsPerSlash = obj.pointsPerSlash || 5;
             pointsEarned += pointsPerSlash;
 
             if (!gameStateRef.current.gamePaused) {
