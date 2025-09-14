@@ -194,15 +194,10 @@ export default function Moninja() {
         // Use specific mobile landscape values
         baseVelocityY = GAME_CONFIG.MOBILE_LANDSCAPE_BASE_VELOCITY_Y;
         maxVelocityY = GAME_CONFIG.MOBILE_LANDSCAPE_MAX_VELOCITY_Y;
-        baseVelocityX *= 1.1; // Slightly increase horizontal movement
       } else {
         // Use normal values for portrait and desktop
         baseVelocityY = GAME_CONFIG.BASE_VELOCITY_Y;
         maxVelocityY = GAME_CONFIG.MAX_VELOCITY_Y;
-
-        if (isLandscape && !isMobile) {
-          baseVelocityY *= 0.75; // Moderate reduction for landscape desktop
-        }
       }
 
       const baseRotationSpeed = GAME_CONFIG.BASE_ROTATION_SPEED;
