@@ -187,7 +187,7 @@ export default function Moninja() {
       const isLandscapeMobile = isLandscape && isMobile;
 
       // Set base speeds based on orientation
-      let baseVelocityX = GAME_CONFIG.BASE_VELOCITY_X;
+      const baseVelocityX = GAME_CONFIG.BASE_VELOCITY_X;
       let baseVelocityY, maxVelocityY;
 
       if (isLandscapeMobile) {
