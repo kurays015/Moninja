@@ -28,6 +28,6 @@ export const GAME_CONFIG = {
   MAX_ROTATION_SPEED: 12, // Maximum rotation speed
   SPEED_INCREASE_INTERVAL: 25, // Increase speed every 25 points
   // Mobile landscape specific velocities
-  MOBILE_LANDSCAPE_BASE_VELOCITY_Y: 9,
-  MOBILE_LANDSCAPE_MAX_VELOCITY_Y: 12,
+  MOBILE_LANDSCAPE_BASE_VELOCITY_Y: 10,
+  MOBILE_LANDSCAPE_MAX_VELOCITY_Y: 13,
 } as const;

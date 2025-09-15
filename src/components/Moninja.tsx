@@ -495,6 +495,8 @@ export default function Moninja() {
 
     if (gamePaused || gameOver || bombHit) return;
 
+    if (gameState.isMonadSlashing) return;
+
     console.log("Creating object wave, score:", score);
 
     // Check frenzy trigger
@@ -540,7 +542,7 @@ export default function Moninja() {
         }
       }, i * 200);
     });
-  }, [createObject, manageFrenzyMode]);
+  }, [createObject, manageFrenzyMode, gameState.isMonadSlashing]);
 
   // 4. Improved game spawning with better frenzy integration
   useEffect(() => {
