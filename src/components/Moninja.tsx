@@ -754,7 +754,7 @@ export default function Moninja() {
 
       if (distance < 80) {
         // Create watermelon slice effect
-        const watermelonSliceEffect: SliceEffect = {
+        const monadSliceEffect: SliceEffect = {
           id: Date.now() + Math.random(),
           x: startButton.x,
           y: startButton.y,
@@ -771,12 +771,12 @@ export default function Moninja() {
             Math.PI,
         };
 
-        setSliceEffects(prev => [...prev, watermelonSliceEffect]);
+        setSliceEffects(prev => [...prev, monadSliceEffect]);
 
         // Remove slice effect after animation
         setTimeout(() => {
           setSliceEffects(prev =>
-            prev.filter(effect => effect.id !== watermelonSliceEffect.id)
+            prev.filter(effect => effect.id !== monadSliceEffect.id)
           );
         }, 1200);
 
