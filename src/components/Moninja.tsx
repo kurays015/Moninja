@@ -349,38 +349,105 @@ export default function Moninja() {
     [debouncedSubmit]
   );
 
-  // 2. Optimized createFrenzyWave with staggered spawning for smoothness
   const createFrenzyWave = useCallback(() => {
     if (gameStateRef.current.gamePaused || gameStateRef.current.bombHit) return;
 
     if (hasVisibleBombOrMonad) return;
 
     console.log("Creating frenzy wave");
-    const waveSize =
-      Math.floor(Math.random() * 4) + GAME_CONFIG.FRENZY_WAVE_SIZE.min; // Reduced randomness range
-    const rect = gameAreaRef.current?.getBoundingClientRect();
-    const maxWidth = (rect ? rect.width : window.innerWidth) - 100;
-    const positions: number[] = [];
 
-    // Pre-calculate positions with better distribution
-    for (let i = 0; i < waveSize; i++) {
-      let attempts = 0;
-      let x: number;
-      do {
-        x = Math.random() * maxWidth;
-        attempts++;
-      } while (
-        attempts < 15 && // Reduced attempts for faster generation
-        positions.some(
-          pos => Math.abs(pos - x) < GAME_CONFIG.FRENZY_MIN_SPACING
-        )
-      );
-      positions.push(x);
+    // Detect mobile landscape mode
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    const isLandscape = screenWidth > screenHeight;
+    const isMobile = screenWidth <= 768;
+    const isLandscapeMobile = isLandscape && isMobile;
+
+    // Adjust wave size for mobile landscape - make it bigger for better spread
+    const baseWaveSize = isLandscapeMobile
+      ? Math.floor(Math.random() * 3) + 6 // 6-8 objects for mobile landscape
+      : Math.floor(Math.random() * 4) + GAME_CONFIG.FRENZY_WAVE_SIZE.min; // Original: 4-7
+
+    const waveSize = baseWaveSize;
+    const rect = gameAreaRef.current?.getBoundingClientRect();
+
+    // Calculate available width with better mobile landscape handling
+    let maxWidth: number;
+    let minMargin: number;
+
+    if (isLandscapeMobile) {
+      // Use more of the screen width in mobile landscape
+      minMargin = 60; // Reduced margin from default
+      maxWidth = (rect ? rect.width : screenWidth) - minMargin * 2;
+    } else {
+      // Desktop/portrait mobile - original logic
+      minMargin = 50;
+      maxWidth = (rect ? rect.width : window.innerWidth) - 100;
     }
 
-    // Staggered object creation for smoother performance
+    const positions: number[] = [];
+
+    // Better position distribution algorithm for mobile landscape
+    if (isLandscapeMobile) {
+      // For mobile landscape, use a grid-like distribution to ensure better spread
+      const sections = Math.min(waveSize, 6); // Divide screen into sections
+      const sectionWidth = maxWidth / sections;
+
+      for (let i = 0; i < waveSize; i++) {
+        let x: number;
+        if (i < sections) {
+          // First objects - one per section for guaranteed spread
+          const sectionCenter = (i + 0.5) * sectionWidth;
+          const randomOffset = (Math.random() - 0.5) * (sectionWidth * 0.6); // 60% of section width
+          x = minMargin + sectionCenter + randomOffset;
+        } else {
+          // Additional objects - random but with collision avoidance
+          let attempts = 0;
+          do {
+            x = minMargin + Math.random() * maxWidth;
+            attempts++;
+          } while (
+            attempts < 20 &&
+            positions.some(
+              pos => Math.abs(pos - x) < GAME_CONFIG.FRENZY_MIN_SPACING
+            )
+          );
+        }
+
+        // Clamp to valid range
+        x = Math.max(minMargin, Math.min(minMargin + maxWidth, x));
+        positions.push(x);
+      }
+    } else {
+      // Desktop/portrait - original algorithm but improved
+      for (let i = 0; i < waveSize; i++) {
+        let attempts = 0;
+        let x: number;
+        do {
+          x = Math.random() * maxWidth;
+          attempts++;
+        } while (
+          attempts < 15 &&
+          positions.some(
+            pos => Math.abs(pos - x) < GAME_CONFIG.FRENZY_MIN_SPACING
+          )
+        );
+        positions.push(x);
+      }
+    }
+
+    console.log(
+      `Frenzy wave positions for ${
+        isLandscapeMobile ? "mobile landscape" : "desktop/portrait"
+      }:`,
+      positions
+    );
+
+    // Staggered object creation - faster timing for mobile landscape
+    const staggerDelay = isLandscapeMobile ? 60 : 80; // Faster spawning on mobile landscape
+
     positions.forEach((x, index) => {
-      const delay = index * 80; // Small delay between each object (80ms)
+      const delay = index * staggerDelay;
 
       setTimeout(() => {
         // Double-check game state before creating object
@@ -396,7 +463,7 @@ export default function Moninja() {
     });
   }, [createObject, hasVisibleBombOrMonad]);
 
-  // 3. Fixed frenzy management with proper trigger detection
+  //Fixed frenzy management with proper trigger detection
   const manageFrenzyMode = useCallback(() => {
     const { score, frenzyMode, gamePaused, bombHit } = gameStateRef.current;
 
@@ -544,7 +611,7 @@ export default function Moninja() {
     });
   }, [createObject, manageFrenzyMode, gameState.isMonadSlashing]);
 
-  // 4. Improved game spawning with better frenzy integration
+  //Improved game spawning with better frenzy integration
   useEffect(() => {
     if (
       gameState.gameStarted &&
