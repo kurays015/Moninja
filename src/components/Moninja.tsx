@@ -225,8 +225,11 @@ export default function Moninja() {
       );
 
       // Frenzy mode gets additional speed boost
-      const frenzyMultiplier = frenzyMode ? 1.2 : 1.0;
-
+      const frenzyMultiplier = frenzyMode
+        ? isLandscapeMobile
+          ? 1.8
+          : 1.5 // faster in landscape mobile
+        : 1;
       // Adjust gravity based on screen size and orientation
       let gravity = frenzyMode ? 0.25 : 0.35;
 
