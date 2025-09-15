@@ -338,7 +338,7 @@ export default function SliceEffects({ sliceEffects }: SliceEffectsProps) {
                 }}
               >
                 <Image
-                  src={effect.imageSrc ?? "/Watermelon.svg"}
+                  src={effect.imageSrc ?? "/monad.svg"}
                   alt="start-left"
                   width={160}
                   height={160}
@@ -359,7 +359,7 @@ export default function SliceEffects({ sliceEffects }: SliceEffectsProps) {
                 }}
               >
                 <Image
-                  src={effect.imageSrc ?? "/Watermelon.svg"}
+                  src={effect.imageSrc ?? "/monad.svg"}
                   alt="start-right"
                   width={160}
                   height={160}
