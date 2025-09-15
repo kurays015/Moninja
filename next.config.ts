@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
           { key: "Access-Control-Allow-Credentials", value: "true" },
           {
             key: "Access-Control-Allow-Origin",
-            value: "https://monad-games-id-site.vercel.app",
+            value: process.env.MONAD_CLIP_BASE_URL!,
           }, // replace this your actual origin
           {
             key: "Access-Control-Allow-Methods",

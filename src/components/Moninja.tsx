@@ -30,11 +30,13 @@ import TransactionToast from "./TransactionToast";
 import ResponsiveUserProfile from "./PlayerStatusPanel";
 import { ObjectPool } from "../lib/ObjectPool";
 import { MONANIMAL_IMAGES } from "../lib/monanimalsImages";
-import { getSpeedMultiplier } from "../lib/getSpeedMultiplier";
+import {
+  getSpeedMultiplierBalanced,
+  getVerticalSpeedMultiplier,
+} from "../lib/getSpeedMultiplier";
 import { GAME_CONFIG } from "../lib/gameConfig";
 
 export default function Moninja() {
-  // Consolidated game state
   const [gameState, setGameState] = useState<GameState>({
     score: 0,
     localScore: 0,
@@ -52,7 +54,6 @@ export default function Moninja() {
     isSubmitting: false,
   });
 
-  // Individual states that change frequently (keep separate for performance)
   const [objects, setObjects] = useState<GameObject[]>([]);
   const [startButton, setStartButton] = useState<StartButton | null>(null);
   const [slashPath, setSlashPath] = useState<SlashPoint[]>([]);
@@ -157,7 +158,6 @@ export default function Moninja() {
     };
   }, []);
 
-  // Updated createObject function with progressive speed and mobile landscape fix
   const createObject = useCallback(
     (
       startX: number,
@@ -176,58 +176,65 @@ export default function Moninja() {
         ? "monad.svg"
         : MONANIMAL_IMAGES[Math.floor(Math.random() * MONANIMAL_IMAGES.length)];
 
-      // Calculate speed multiplier based on current score
-      const speedMultiplier = getSpeedMultiplier(gameStateRef.current.score);
+      // Calculate separate multipliers for different aspects
+      const horizontalSpeedMultiplier = getSpeedMultiplierBalanced(
+        gameStateRef.current.score
+      );
+      const verticalSpeedMultiplier = getVerticalSpeedMultiplier(
+        gameStateRef.current.score
+      );
+      const rotationMultiplier = Math.min(horizontalSpeedMultiplier, 1.8); // Cap rotation scaling
 
       // Detect landscape mode and adjust velocities accordingly
       const screenWidth = window.innerWidth;
       const screenHeight = window.innerHeight;
       const isLandscape = screenWidth > screenHeight;
-      const isMobile = screenWidth <= 768; // Typical mobile breakpoint
+      const isMobile = screenWidth <= 768;
       const isLandscapeMobile = isLandscape && isMobile;
 
       // Set base speeds based on orientation
-      let baseVelocityX = GAME_CONFIG.BASE_VELOCITY_X;
+      const baseVelocityX = GAME_CONFIG.BASE_VELOCITY_X;
       let baseVelocityY, maxVelocityY;
 
       if (isLandscapeMobile) {
-        // Use specific mobile landscape values
         baseVelocityY = GAME_CONFIG.MOBILE_LANDSCAPE_BASE_VELOCITY_Y;
         maxVelocityY = GAME_CONFIG.MOBILE_LANDSCAPE_MAX_VELOCITY_Y;
-        baseVelocityX *= 1.1; // Slightly increase horizontal movement
       } else {
-        // Use normal values for portrait and desktop
         baseVelocityY = GAME_CONFIG.BASE_VELOCITY_Y;
         maxVelocityY = GAME_CONFIG.MAX_VELOCITY_Y;
-
-        if (isLandscape && !isMobile) {
-          baseVelocityY *= 0.75; // Moderate reduction for landscape desktop
-        }
       }
 
       const baseRotationSpeed = GAME_CONFIG.BASE_ROTATION_SPEED;
 
-      // Apply speed multiplier with adjusted base speeds
+      // Apply different multipliers for horizontal vs vertical movement
       const velocityXRange = Math.min(
         GAME_CONFIG.MAX_VELOCITY_X,
-        baseVelocityX * speedMultiplier
+        baseVelocityX * horizontalSpeedMultiplier
       );
+
+      // Use screen height to scale vertical velocity appropriately
+      const screenHeightFactor = Math.min(screenHeight / 800, 1.5); // Normalize to 800px base
       const velocityYRange = Math.min(
-        maxVelocityY,
-        baseVelocityY * speedMultiplier
+        maxVelocityY * screenHeightFactor,
+        baseVelocityY * verticalSpeedMultiplier * screenHeightFactor
       );
+
       const rotationSpeedRange = Math.min(
         GAME_CONFIG.MAX_ROTATION_SPEED,
-        baseRotationSpeed * speedMultiplier
+        baseRotationSpeed * rotationMultiplier
       );
 
       // Frenzy mode gets additional speed boost
-      const frenzyMultiplier = frenzyMode ? 1.3 : 1.0;
+      const frenzyMultiplier = frenzyMode ? 1.2 : 1.0;
 
-      // Adjust gravity based on screen orientation for better arc control
+      // Adjust gravity based on screen size and orientation
       let gravity = frenzyMode ? 0.25 : 0.35;
+
+      // Scale gravity with screen height to maintain consistent arc feel
+      gravity *= Math.max(screenHeight / 800, 0.8);
+
       if (isLandscapeMobile) {
-        gravity *= 1.2; // Increase gravity in landscape to bring objects down faster
+        gravity *= 1.2;
       }
 
       const obj: GameObject = {
@@ -266,7 +273,6 @@ export default function Moninja() {
     },
     [playSound]
   );
-
   // Batch score submission with debouncing
   const submitScoreBatch = useCallback(
     async (finalScore?: number) => {
@@ -753,7 +759,7 @@ export default function Moninja() {
           x: startButton.x,
           y: startButton.y,
           type: "fruit",
-          imageSrc: "/Watermelon.svg",
+          imageSrc: "/monad.svg",
           width: 160,
           height: 160,
           angle:
@@ -1348,7 +1354,7 @@ export default function Moninja() {
       !startButton.sliced ? (
         <div className="h-screen flex flex-col items-center justify-center gap-4 z-40 select-none">
           <Image
-            src="/Watermelon.svg"
+            src="/monad.svg"
             alt="start-watermelon"
             width={160}
             height={160}

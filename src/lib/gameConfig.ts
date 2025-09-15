@@ -22,8 +22,8 @@ export const GAME_CONFIG = {
   // New speed progression constants
   BASE_VELOCITY_X: 3, // Starting horizontal speed (very slow)
   MAX_VELOCITY_X: 10, // Maximum horizontal speed
-  BASE_VELOCITY_Y: 15, // Starting upward speed (slow)
-  MAX_VELOCITY_Y: 18, // Maximum upward speed
+  BASE_VELOCITY_Y: 12, // Starting upward speed (slow)
+  MAX_VELOCITY_Y: 16, // Maximum upward speed
   BASE_ROTATION_SPEED: 3, // Starting rotation speed
   MAX_ROTATION_SPEED: 12, // Maximum rotation speed
   SPEED_INCREASE_INTERVAL: 25, // Increase speed every 25 points

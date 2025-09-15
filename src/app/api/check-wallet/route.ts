@@ -1,8 +1,6 @@
 import { UserData } from "@/src/types";
 import { NextResponse } from "next/server";
 
-const API_BASE_URL = "https://monad-games-id-site.vercel.app/api";
-
 export async function POST(request: Request) {
   try {
     const { walletAddress } = await request.json();
@@ -15,7 +13,7 @@ export async function POST(request: Request) {
     }
 
     const res = await fetch(
-      `${API_BASE_URL}/check-wallet?wallet=${walletAddress}`
+      `${process.env.MONAD_CLIP_BASE_URL}/api/check-wallet?wallet=${walletAddress}`
     );
 
     if (!res.ok) {

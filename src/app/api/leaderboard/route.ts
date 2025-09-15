@@ -2,7 +2,6 @@ import axios from "axios";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
-  // Get page from URL search params instead of JSON body
   const { searchParams } = new URL(request.url);
   const page = searchParams.get("page");
 
@@ -12,7 +11,7 @@ export async function GET(request: Request) {
 
   try {
     const res = await axios.get(
-      `https://monad-games-id-site.vercel.app/api/leaderboard?page=${page}&gameId=166&sortBy=scores`
+      `${process.env.MONAD_CLIP_BASE_URL}/api/leaderboard?page=${page}&gameId=166&sortBy=scores`
     );
 
     if (!res.data) {
