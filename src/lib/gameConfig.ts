@@ -18,7 +18,7 @@ export const GAME_CONFIG = {
   SLICE_SOUND_THROTTLE: 50,
   MAX_TRAIL_POINTS: 25,
   MOVEMENT_THRESHOLD: 2,
-  SUBMIT_DEBOUNCE: 5000,
+  SUBMIT_DEBOUNCE: 10000,
   // New speed progression constants
   BASE_VELOCITY_X: 3, // Starting horizontal speed (very slow)
   MAX_VELOCITY_X: 10, // Maximum horizontal speed

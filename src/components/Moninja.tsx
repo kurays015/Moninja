@@ -278,15 +278,18 @@ export default function Moninja() {
     [playSound]
   );
 
-  const submitFinalScore = useCallback(
-    async (finalScore: number) => {
-      if (gameStateRef.current.isSubmitting || finalScore <= 0) return;
+  // Batch score submission with debouncing
+  const submitScoreBatch = useCallback(
+    async (finalScore?: number) => {
+      const scoreToSubmit = finalScore || gameStateRef.current.localScore;
+      const scoreDifference =
+        scoreToSubmit - gameStateRef.current.submittedScore;
+
+      if (scoreDifference <= 0 || gameStateRef.current.isSubmitting) return;
 
       updateGameState({ isSubmitting: true });
 
       try {
-        console.log("Submitting final score:", finalScore);
-
         // Generate nonce before submitting
         const nonce = await generateNonce(
           gameSessionId!,
@@ -299,7 +302,7 @@ export default function Moninja() {
             {
               player: walletAddress!,
               transactionAmount: 1,
-              scoreAmount: finalScore, // Submit the entire final score
+              scoreAmount: scoreDifference, // Submit the entire final score
               sessionId: gameSessionId!,
               nonce,
             },
@@ -311,10 +314,8 @@ export default function Moninja() {
           submittedScore: finalScore,
           isSubmitting: false,
         });
-
-        console.log("Final score submitted successfully:", finalScore);
       } catch (error) {
-        console.error("Error submitting final score:", error);
+        console.error("Error submitting score batch:", error);
         updateGameState({ isSubmitting: false });
       }
     },
@@ -328,14 +329,28 @@ export default function Moninja() {
     ]
   );
 
+  // Debounced score submission
+  const debouncedSubmit = useCallback(() => {
+    if (timersRef.current.submitTimeout) {
+      clearTimeout(timersRef.current.submitTimeout);
+    }
+    timersRef.current.submitTimeout = setTimeout(() => {
+      submitScoreBatch();
+    }, GAME_CONFIG.SUBMIT_DEBOUNCE);
+  }, [submitScoreBatch]);
+
   // Optimized score update
-  const updateScore = useCallback((points: number) => {
-    setGameState(prev => {
-      const newLocalScore = prev.localScore + points;
-      const newScore = prev.score + points;
-      return { ...prev, localScore: newLocalScore, score: newScore };
-    });
-  }, []);
+  const updateScore = useCallback(
+    (points: number) => {
+      setGameState(prev => {
+        const newLocalScore = prev.localScore + points;
+        const newScore = prev.score + points;
+        debouncedSubmit();
+        return { ...prev, localScore: newLocalScore, score: newScore };
+      });
+    },
+    [debouncedSubmit]
+  );
 
   const createFrenzyWave = useCallback(() => {
     if (gameStateRef.current.gamePaused || gameStateRef.current.bombHit) return;
@@ -711,7 +726,7 @@ export default function Moninja() {
     startGameSession,
   ]);
 
-  // Modified game over handling effect - only submit score here
+  // Game over handling effect
   useEffect(() => {
     if (gameState.gameOver && !gameState.gameEnded) {
       updateGameState({ gameEnded: true });
@@ -734,23 +749,18 @@ export default function Moninja() {
         );
       }
 
-      // Clear any pending submit timeouts since we're not using them anymore
+      // Submit final score
       if (timersRef.current.submitTimeout) {
         clearTimeout(timersRef.current.submitTimeout);
-        timersRef.current.submitTimeout = null;
       }
-
-      // Submit ONLY the final score when game ends
-      if (gameState.localScore > 0) {
-        submitFinalScore(gameState.localScore);
-      }
+      submitScoreBatch(gameState.localScore);
     }
   }, [
     gameState.gameOver,
     gameState.gameEnded,
     gameSessionId,
     endGameSession,
-    submitFinalScore,
+    submitScoreBatch,
     updateGameState,
     gameState.localScore,
   ]);
