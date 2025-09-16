@@ -7,7 +7,6 @@ import {
   SlashPoint,
   SliceEffect,
   StartButton,
-  SubmitScoreResponse,
 } from "../types";
 import { useCrossAppAccount } from "../hooks/useCrossAppAccount";
 import Image from "next/image";

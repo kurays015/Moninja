@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
   try {
     const res = await axios.get(
-      `${process.env.MONAD_CLIP_BASE_URL}/api/leaderboard?page=${page}&gameId=166&sortBy=scores`
+      `${process.env.MONAD_CLIP_BASE_URL}/api/leaderboard?page=${page}&gameId=12&sortBy=scores`
     );
 
     if (!res.data) {
