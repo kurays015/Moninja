@@ -25,8 +25,8 @@ import { usePlayerTotalScore } from "../hooks/usePlayerTotalScore";
 import { useUsername } from "../hooks/useUsername";
 import { useGameSession } from "../hooks/useGameSession";
 import PauseButton from "./PauseButton";
-import { toast } from "react-toastify";
-import TransactionToast from "./TransactionToast";
+// import { toast } from "react-toastify";
+// import TransactionToast from "./TransactionToast";
 import ResponsiveUserProfile from "./PlayerStatusPanel";
 import { ObjectPool } from "../lib/ObjectPool";
 import { MONANIMAL_IMAGES } from "../lib/monanimalsImages";
@@ -288,39 +288,38 @@ export default function Moninja() {
       updateGameState({ isSubmitting: true });
 
       try {
-        const data: SubmitScoreResponse = await new Promise(
-          (resolve, reject) => {
-            submitScore.mutate(
-              {
-                player: walletAddress!,
-                transactionAmount: 1,
-                scoreAmount: scoreDifference,
-                sessionId: gameSessionId!,
-              },
-              { onSuccess: resolve, onError: reject }
-            );
-          }
-        );
+        // const data: SubmitScoreResponse =
+        await new Promise((resolve, reject) => {
+          submitScore.mutate(
+            {
+              player: walletAddress!,
+              transactionAmount: 1,
+              scoreAmount: scoreDifference,
+              sessionId: gameSessionId!,
+            },
+            { onSuccess: resolve, onError: reject }
+          );
+        });
 
         updateGameState({
           submittedScore: scoreToSubmit,
           isSubmitting: false,
         });
 
-        toast(<TransactionToast transactionsInfo={data} />, {
-          autoClose: 4000,
-          closeOnClick: false,
-          pauseOnHover: true,
-          draggable: false,
-          style: {
-            background: "rgba(17, 24, 39, 0.95)",
-            border: "1px solid rgba(59, 130, 246, 0.2)",
-            borderRadius: "8px",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-            padding: "0",
-            margin: "0",
-          },
-        });
+        // toast(<TransactionToast transactionsInfo={data} />, {
+        //   autoClose: 4000,
+        //   closeOnClick: false,
+        //   pauseOnHover: true,
+        //   draggable: false,
+        //   style: {
+        //     background: "rgba(17, 24, 39, 0.95)",
+        //     border: "1px solid rgba(59, 130, 246, 0.2)",
+        //     borderRadius: "8px",
+        //     boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+        //     padding: "0",
+        //     margin: "0",
+        //   },
+        // });
       } catch (error) {
         console.error("Error submitting score batch:", error);
         updateGameState({ isSubmitting: false });
