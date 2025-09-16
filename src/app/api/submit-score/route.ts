@@ -4,7 +4,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { monadTestnet } from "viem/chains";
 import jwt from "jsonwebtoken";
 import { SessionData } from "@/src/types";
-import { CONTRACT_ABI } from "@/src/utils/abi";
+import { UPDATE_PLAYER_DATA_ABI } from "@/src/utils/abi";
 import { cookies } from "next/headers";
 import { updatePlayerDataSchema } from "@/src/schema/updatePlayerDataSchema";
 import arcjet, { tokenBucket } from "@arcjet/next";
@@ -126,15 +126,18 @@ export async function POST(request: Request) {
     // 6. BLOCKCHAIN TRANSACTION
     try {
       // Execute the blockchain transaction
+
+      const playerData = {
+        player: player as `0x${string}`,
+        score: BigInt(scoreAmount),
+        transactions: BigInt(transactionAmount),
+      };
+
       const hash = await walletClient.writeContract({
         address: contractAddress,
-        abi: CONTRACT_ABI,
+        abi: UPDATE_PLAYER_DATA_ABI,
         functionName: "updatePlayerData",
-        args: [
-          player as `0x${string}`,
-          BigInt(scoreAmount),
-          BigInt(transactionAmount),
-        ],
+        args: [playerData],
       });
 
       console.log("Successfully processed score submission:", {

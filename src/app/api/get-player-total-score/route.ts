@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createPublicClient, http } from "viem";
 import { monadTestnet } from "viem/chains";
 
-const CONTRACT_ABI = [
+const SCORE_CONTRACT_ABI = [
   {
     inputs: [{ name: "", type: "address" }],
     name: "totalScoreOfPlayer",
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       address: process.env.CONTRACT_ADDRESS as `0x${string}`,
       functionName: "totalScoreOfPlayer",
       args: [walletAddress as `0x${string}`],
-      abi: CONTRACT_ABI,
+      abi: SCORE_CONTRACT_ABI,
     });
 
     if (totalScore === null || totalScore === undefined) {
