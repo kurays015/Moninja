@@ -86,6 +86,7 @@ export interface StartGameSessionRequest {
 export interface StartGameSessionResponse {
   sessionToken: string;
   sessionId: string;
+  gameTime: number | undefined;
 }
 
 export interface EndGameSessionRequest {
@@ -97,6 +98,7 @@ export interface SubmitScoreRequest {
   transactionAmount: number;
   scoreAmount: number;
   sessionId: string;
+  nonce: string;
 }
 
 export interface SubmitScoreResponse {

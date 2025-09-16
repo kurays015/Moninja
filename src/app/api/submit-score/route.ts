@@ -8,6 +8,7 @@ import { UPDATE_PLAYER_DATA_ABI } from "@/src/utils/abi";
 import { cookies } from "next/headers";
 import { updatePlayerDataSchema } from "@/src/schema/updatePlayerDataSchema";
 import arcjet, { tokenBucket } from "@arcjet/next";
+import { isNonceUsed, markNonceAsUsed } from "@/src/lib/nonceStore";
 
 const privateKey = process.env.PRIVATE_KEY as `0x${string}`;
 const contractAddress = process.env.CONTRACT_ADDRESS as `0x${string}`;
@@ -41,8 +42,168 @@ export async function POST(request: Request) {
   try {
     const privy_token = (await cookies()).get("privy-token");
 
-    const { player, scoreAmount, transactionAmount, sessionId } =
+    const { player, scoreAmount, transactionAmount, sessionId, nonce } =
       await request.json();
+
+    // Enhanced nonce validation with better error handling
+    try {
+      console.log("🔍 Validating nonce:", {
+        nonceReceived: !!nonce,
+        nonceLength: nonce?.length,
+        sessionId,
+        player,
+      });
+
+      // 1. Check if nonce exists
+      if (!nonce) {
+        console.error("❌ No nonce provided");
+        return NextResponse.json(
+          { error: "Nonce is required" },
+          { status: 400 }
+        );
+      }
+
+      // 2. Check if nonce was already used (before JWT verification)
+      let alreadyUsed;
+      try {
+        alreadyUsed = await isNonceUsed(nonce);
+        console.log("🔍 Nonce usage check:", {
+          nonce: nonce.substring(0, 20) + "...",
+          alreadyUsed,
+        });
+      } catch (redisError) {
+        console.error("❌ Redis error checking nonce:", redisError);
+        return NextResponse.json(
+          { error: "Database connection error" },
+          { status: 500 }
+        );
+      }
+
+      if (alreadyUsed) {
+        console.error("❌ Nonce already used:", nonce.substring(0, 20) + "...");
+        return NextResponse.json(
+          { error: "Nonce already used" },
+          { status: 400 }
+        );
+      }
+
+      // 3. Verify JWT nonce
+      let nonceData;
+      try {
+        console.log("🔍 Verifying JWT nonce...");
+        nonceData = jwt.verify(nonce, process.env.JWT_SECRET!) as {
+          sessionId: string;
+          player: string;
+          timestamp: number;
+          gameStartTime: number;
+          random: string;
+        };
+        console.log("✅ JWT verification successful:", {
+          sessionId: nonceData.sessionId,
+          player: nonceData.player,
+          timestamp: new Date(nonceData.timestamp).toISOString(),
+        });
+      } catch (jwtError) {
+        console.error("❌ JWT verification failed:", {
+          error:
+            jwtError instanceof Error ? jwtError.message : "Unknown JWT error",
+          name: jwtError instanceof Error ? jwtError.name : "Unknown",
+          nonceStart: nonce.substring(0, 20) + "...",
+        });
+
+        if (jwtError instanceof Error) {
+          if (jwtError.name === "TokenExpiredError") {
+            return NextResponse.json(
+              { error: "Nonce has expired" },
+              { status: 400 }
+            );
+          } else if (jwtError.name === "JsonWebTokenError") {
+            return NextResponse.json(
+              { error: "Invalid nonce format" },
+              { status: 400 }
+            );
+          }
+        }
+
+        return NextResponse.json(
+          { error: "Invalid nonce signature" },
+          { status: 400 }
+        );
+      }
+
+      // 4. Validate nonce data matches request
+      if (nonceData.sessionId !== sessionId) {
+        console.error("❌ Session ID mismatch:", {
+          nonceSessionId: nonceData.sessionId,
+          requestSessionId: sessionId,
+        });
+        return NextResponse.json(
+          { error: "Nonce session ID mismatch" },
+          { status: 400 }
+        );
+      }
+
+      if (nonceData.player !== player) {
+        console.error("❌ Player mismatch:", {
+          noncePlayer: nonceData.player,
+          requestPlayer: player,
+        });
+        return NextResponse.json(
+          { error: "Nonce player mismatch" },
+          { status: 400 }
+        );
+      }
+
+      // 5. Check if nonce is too old (5 minutes)
+      const nonceAge = Date.now() - nonceData.timestamp;
+      const maxAge = 5 * 60 * 1000; // 5 minutes
+
+      console.log("🕐 Nonce age check:", {
+        nonceTimestamp: new Date(nonceData.timestamp).toISOString(),
+        currentTime: new Date().toISOString(),
+        ageMs: nonceAge,
+        maxAgeMs: maxAge,
+        isExpired: nonceAge > maxAge,
+      });
+
+      if (nonceAge > maxAge) {
+        console.error("❌ Nonce expired:", {
+          ageMinutes: Math.floor(nonceAge / 60000),
+          maxAgeMinutes: Math.floor(maxAge / 60000),
+        });
+        return NextResponse.json(
+          { error: "Nonce expired (older than 5 minutes)" },
+          { status: 400 }
+        );
+      }
+
+      // 6. Mark nonce as used
+      try {
+        await markNonceAsUsed(nonce);
+        console.log("✅ Nonce marked as used successfully");
+      } catch (redisError) {
+        console.error("❌ Redis error marking nonce as used:", redisError);
+        return NextResponse.json(
+          { error: "Database error storing nonce" },
+          { status: 500 }
+        );
+      }
+
+      console.log("✅ Nonce validation completed successfully");
+    } catch (err) {
+      // This catch block should now rarely be reached due to specific error handling above
+      console.error("❌ Unexpected error in nonce validation:", err);
+
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      return NextResponse.json(
+        {
+          error: "Nonce validation failed",
+          details:
+            process.env.NODE_ENV === "development" ? errorMessage : undefined,
+        },
+        { status: 400 }
+      );
+    }
 
     const decision = await aj.protect(request, {
       userId: player || privy_token,

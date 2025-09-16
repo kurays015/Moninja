@@ -32,6 +32,7 @@ export async function POST(request: Request) {
         success: true,
         sessionToken,
         sessionId,
+        gameTime: Date.now(),
       },
       { status: 200 }
     );
