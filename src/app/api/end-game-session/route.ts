@@ -1,4 +1,3 @@
-// app/api/game/end-session/route.ts
 import { getSessionFromRequest } from "@/src/lib/getSessionFromRequest";
 import { endSession } from "@/src/lib/sessions";
 import { NextResponse } from "next/server";

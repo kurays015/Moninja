@@ -1,4 +1,3 @@
-// API Route: /api/generate-nonce/route.ts
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { getSessionFromRequest } from "@/src/lib/getSessionFromRequest";
@@ -10,7 +9,7 @@ export async function POST(request: Request) {
 
     if (!session || !session.isActive) {
       return NextResponse.json(
-        { message: "No active game session" },
+        { message: "Please play the game first" },
         { status: 401 }
       );
     }
@@ -19,14 +18,14 @@ export async function POST(request: Request) {
 
     if (!player) {
       return NextResponse.json(
-        { message: "Missing required parameter: player" },
+        { message: "Please play the game first" },
         { status: 400 }
       );
     }
 
     if (player.toLowerCase() !== session.player.toLowerCase()) {
       return NextResponse.json(
-        { message: "Player does not match active session" },
+        { message: "Please play the game first" },
         { status: 401 }
       );
     }
@@ -42,14 +41,13 @@ export async function POST(request: Request) {
           Math.random().toString(36).substring(7) + Date.now().toString(36),
       },
       process.env.JWT_SECRET!,
-      { expiresIn: "5m" }
+      { expiresIn: "10s" }
     );
 
     return NextResponse.json({ nonce });
   } catch (error) {
-    console.error("Error generating nonce:", error);
     return NextResponse.json(
-      { message: "Failed to generate nonce" },
+      { message: "Failed to generate nonce", error },
       { status: 500 }
     );
   }

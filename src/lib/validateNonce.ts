@@ -3,6 +3,8 @@ import { isNonceUsed, markNonceAsUsed } from "./nonceStore";
 import { GameSession, NoncePayload } from "../types";
 import jwt from "jsonwebtoken";
 
+const GENERIC_ERROR = "Invalid request. Please try again.";
+
 export async function validateNonce(
   nonce: string,
   session: GameSession
@@ -23,10 +25,7 @@ export async function validateNonce(
       console.error("❌ No nonce provided");
       return {
         success: false,
-        response: NextResponse.json(
-          { error: "Nonce is required" },
-          { status: 400 }
-        ),
+        response: NextResponse.json({ error: GENERIC_ERROR }, { status: 400 }),
       };
     }
 
@@ -41,10 +40,7 @@ export async function validateNonce(
       console.error("❌ Nonce already used:", nonce.substring(0, 20) + "...");
       return {
         success: false,
-        response: NextResponse.json(
-          { error: "Nonce already used" },
-          { status: 400 }
-        ),
+        response: NextResponse.json({ error: GENERIC_ERROR }, { status: 400 }),
       };
     }
 
@@ -72,7 +68,7 @@ export async function validateNonce(
           return {
             success: false,
             response: NextResponse.json(
-              { error: "Nonce has expired" },
+              { error: GENERIC_ERROR },
               { status: 400 }
             ),
           };
@@ -80,7 +76,7 @@ export async function validateNonce(
           return {
             success: false,
             response: NextResponse.json(
-              { error: "Invalid nonce format" },
+              { error: GENERIC_ERROR },
               { status: 400 }
             ),
           };
@@ -89,10 +85,7 @@ export async function validateNonce(
 
       return {
         success: false,
-        response: NextResponse.json(
-          { error: "Invalid nonce signature" },
-          { status: 400 }
-        ),
+        response: NextResponse.json({ error: GENERIC_ERROR }, { status: 400 }),
       };
     }
 
@@ -104,10 +97,7 @@ export async function validateNonce(
       });
       return {
         success: false,
-        response: NextResponse.json(
-          { error: "Nonce session mismatch" },
-          { status: 400 }
-        ),
+        response: NextResponse.json({ error: GENERIC_ERROR }, { status: 400 }),
       };
     }
 
@@ -119,10 +109,7 @@ export async function validateNonce(
       });
       return {
         success: false,
-        response: NextResponse.json(
-          { error: "Nonce player mismatch" },
-          { status: 400 }
-        ),
+        response: NextResponse.json({ error: GENERIC_ERROR }, { status: 400 }),
       };
     }
 
@@ -145,10 +132,7 @@ export async function validateNonce(
       });
       return {
         success: false,
-        response: NextResponse.json(
-          { error: "Nonce expired (older than 5 minutes)" },
-          { status: 400 }
-        ),
+        response: NextResponse.json({ error: GENERIC_ERROR }, { status: 400 }),
       };
     }
 
@@ -167,7 +151,7 @@ export async function validateNonce(
       success: false,
       response: NextResponse.json(
         {
-          error: "Nonce validation failed",
+          error: GENERIC_ERROR,
           details:
             process.env.NODE_ENV === "development" ? errorMessage : undefined,
         },
