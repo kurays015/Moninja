@@ -1,19 +1,20 @@
 // hooks/useNonce.ts
 import { useCallback } from "react";
 
-export const useNonce = (gameSessionToken: string | null) => {
+export const useNonce = () => {
+  // Remove gameSessionToken parameter
   const generateNonce = useCallback(
-    async (sessionId: string, player: string, gameStartTime?: number) => {
-      if (!gameSessionToken) throw new Error("No session token");
-
+    async (player: string, gameStartTime?: number) => {
+      // Remove sessionId parameter
       const response = await fetch("/api/generate-nonce", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${gameSessionToken}`,
+          // Remove Authorization header
         },
+        credentials: "include", // Include HTTP-only cookies
         body: JSON.stringify({
-          sessionId,
+          // Remove sessionId from body - server gets it from cookie
           player,
           gameStartTime,
         }),
@@ -26,7 +27,7 @@ export const useNonce = (gameSessionToken: string | null) => {
       const { nonce } = await response.json();
       return nonce;
     },
-    [gameSessionToken]
+    [] // Remove gameSessionToken dependency
   );
 
   return { generateNonce };

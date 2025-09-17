@@ -1,4 +1,3 @@
-// lib/nonceStore.ts
 import { Redis } from "@upstash/redis";
 
 // Initialize Upstash Redis client
@@ -27,8 +26,8 @@ export async function testRedisConnection(): Promise<boolean> {
 
 export async function markNonceAsUsed(nonce: string): Promise<void> {
   try {
-    // Using setex equivalent in Upstash (expires in 300 seconds = 5 minutes)
-    await redis.setex(`used_nonce:${nonce}`, 300, "1");
+    // Store a marker with TTL (5 minutes)
+    await redis.set(`used_nonce:${nonce}`, "1", { ex: 300 });
     console.log(`✅ Nonce marked as used: ${nonce.substring(0, 20)}...`);
   } catch (error) {
     console.error("❌ Error marking nonce as used:", error);
@@ -56,7 +55,7 @@ export async function markMultipleNoncesAsUsed(
     const pipeline = redis.pipeline();
 
     nonces.forEach(nonce => {
-      pipeline.setex(`used_nonce:${nonce}`, 300, "1");
+      pipeline.set(`used_nonce:${nonce}`, "1", { ex: 300 });
     });
 
     await pipeline.exec();

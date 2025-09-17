@@ -39,7 +39,6 @@ import { useNonce } from "../hooks/useNonce";
 export default function Moninja() {
   const [gameState, setGameState] = useState<GameState>({
     score: 0,
-    localScore: 0,
     submittedScore: 0,
     gameOver: false,
     gameStarted: false,
@@ -62,8 +61,7 @@ export default function Moninja() {
   const [frenzyNotification, setFrenzyNotification] = useState<string | null>(
     ""
   );
-  const [gameSessionToken, setGameSessionToken] = useState<string | null>(null);
-  const [gameSessionId, setGameSessionId] = useState<string | null>(null);
+  const [hasActiveSession, setHasActiveSession] = useState<boolean>(false);
 
   // Refs
   const gameAreaRef = useRef<HTMLDivElement>(null);
@@ -107,9 +105,8 @@ export default function Moninja() {
     });
   const { data: usernameData, isLoading: isLoadingUserName } =
     useUsername(walletAddress);
-  const { startGameSession, endGameSession, submitScore } =
-    useGameSession(gameSessionToken);
-  const { generateNonce } = useNonce(gameSessionToken);
+  const { startGameSession, endGameSession, submitScore } = useGameSession();
+  const { generateNonce } = useNonce();
 
   // Update refs when state changes
   useEffect(() => {
@@ -278,10 +275,10 @@ export default function Moninja() {
     [playSound]
   );
 
-  // Batch score submission with debouncing
+  // Simplified score submission - now only works with single score
   const submitScoreBatch = useCallback(
     async (finalScore?: number) => {
-      const scoreToSubmit = finalScore || gameStateRef.current.localScore;
+      const scoreToSubmit = finalScore || gameStateRef.current.score;
       const scoreDifference =
         scoreToSubmit - gameStateRef.current.submittedScore;
 
@@ -292,7 +289,6 @@ export default function Moninja() {
       try {
         // Generate nonce before submitting
         const nonce = await generateNonce(
-          gameSessionId!,
           walletAddress!,
           startGameSession.data?.gameTime // game start time
         );
@@ -302,16 +298,15 @@ export default function Moninja() {
             {
               player: walletAddress!,
               transactionAmount: 1,
-              scoreAmount: scoreDifference, // Submit the entire final score
-              sessionId: gameSessionId!,
-              nonce,
+              scoreAmount: scoreDifference,
+              nonce, // Remove sessionId - server gets it from cookie
             },
             { onSuccess: resolve, onError: reject }
           );
         });
 
         updateGameState({
-          submittedScore: finalScore,
+          submittedScore: scoreToSubmit,
           isSubmitting: false,
         });
       } catch (error) {
@@ -321,7 +316,6 @@ export default function Moninja() {
     },
     [
       walletAddress,
-      gameSessionId,
       submitScore,
       updateGameState,
       generateNonce,
@@ -339,14 +333,12 @@ export default function Moninja() {
     }, GAME_CONFIG.SUBMIT_DEBOUNCE);
   }, [submitScoreBatch]);
 
-  // Optimized score update
   const updateScore = useCallback(
     (points: number) => {
       setGameState(prev => {
-        const newLocalScore = prev.localScore + points;
         const newScore = prev.score + points;
         debouncedSubmit();
-        return { ...prev, localScore: newLocalScore, score: newScore };
+        return { ...prev, score: newScore };
       });
     },
     [debouncedSubmit]
@@ -698,7 +690,7 @@ export default function Moninja() {
   useEffect(() => {
     if (
       gameState.gameStarted &&
-      !gameSessionId &&
+      !hasActiveSession &&
       walletAddress &&
       !gameState.gameOver &&
       !gameState.bombHit &&
@@ -707,9 +699,8 @@ export default function Moninja() {
       startGameSession.mutate(
         { walletAddress: walletAddress! },
         {
-          onSuccess: data => {
-            setGameSessionToken(data.sessionToken);
-            setGameSessionId(data.sessionId);
+          onSuccess: () => {
+            setHasActiveSession(true); // Only track that session exists
           },
           onError: error => {
             console.error("Error starting game session:", error);
@@ -719,50 +710,47 @@ export default function Moninja() {
     }
   }, [
     gameState.gameStarted,
-    gameSessionId,
     walletAddress,
     gameState.gameOver,
     gameState.bombHit,
     startGameSession,
+    hasActiveSession,
   ]);
 
-  // Game over handling effect
+  // Game over handling effect - simplified to use single score
   useEffect(() => {
     if (gameState.gameOver && !gameState.gameEnded) {
       updateGameState({ gameEnded: true });
 
       // End game session
-      if (gameSessionId) {
-        endGameSession.mutate(
-          { sessionId: gameSessionId },
-          {
-            onSuccess: () => {
-              setGameSessionToken(null);
-              setGameSessionId(null);
-            },
-            onError: error => {
-              console.error("Error ending game session:", error);
-              setGameSessionToken(null);
-              setGameSessionId(null);
-            },
-          }
-        );
+      if (hasActiveSession) {
+        // Changed from gameSessionId check
+        endGameSession.mutate(undefined, {
+          onSuccess: () => {
+            setHasActiveSession(false); // Only track session state
+            // Remove: setGameSessionToken and setGameSessionId
+          },
+          onError: error => {
+            console.error("Error ending game session:", error);
+            setHasActiveSession(false);
+          },
+        });
       }
 
       // Submit final score
       if (timersRef.current.submitTimeout) {
         clearTimeout(timersRef.current.submitTimeout);
       }
-      submitScoreBatch(gameState.localScore);
+      submitScoreBatch(gameState.score);
     }
   }, [
     gameState.gameOver,
     gameState.gameEnded,
-    gameSessionId,
     endGameSession,
     submitScoreBatch,
     updateGameState,
-    gameState.localScore,
+    hasActiveSession,
+    gameState.score, // Changed from localScore to score
   ]);
 
   // Window visibility handling effect
@@ -796,7 +784,7 @@ export default function Moninja() {
     };
   }, [gameState.gameStarted, gameState.gameOver, updateGameState]);
 
-  // Collision detection and game logic (rest of the component remains the same)
+  // Collision detection and game logic - SIMPLIFIED SCORING
   const checkSlashCollisions = useCallback(() => {
     if (
       slashPath.length < 2 ||
@@ -864,11 +852,11 @@ export default function Moninja() {
       }
     }
 
-    // Optimized object collision detection
+    // Optimized object collision detection with simplified scoring
     setObjects(prevObjects => {
       const newObjects = [...prevObjects];
       const newSliceEffects: SliceEffect[] = [];
-      let pointsEarned = 0;
+      let pointsEarned = 0; // Will be incremented by 1 for each successful slash
 
       for (let objIndex = 0; objIndex < newObjects.length; objIndex++) {
         const obj = newObjects[objIndex];
@@ -895,7 +883,6 @@ export default function Moninja() {
         const lastPoint = slashPath[slashPath.length - 1];
         const secondLastPoint = slashPath[slashPath.length - 2] || lastPoint;
 
-        // Handle different object types
         if (obj.type === "monad") {
           const currentSlashCount = obj.slashCount || 0;
           const maxSlashCount = obj.maxSlashCount || 10;
@@ -913,8 +900,8 @@ export default function Moninja() {
             }
 
             updateGameState({ monadSlashCount: newSlashCount });
-            const pointsPerSlash = obj.pointsPerSlash || 5;
-            pointsEarned += pointsPerSlash;
+            // Each monad slash is worth exactly 5 point
+            pointsEarned += 5;
 
             if (!gameStateRef.current.gamePaused) {
               playSound(
@@ -922,7 +909,7 @@ export default function Moninja() {
               );
             }
 
-            // ADD THIS BACK - Create monad slice effects!
+            // Create monad slice effects
             if (newSlashCount >= maxSlashCount) {
               // Final monad destruction - create explosion effect
               newSliceEffects.push({
@@ -963,7 +950,7 @@ export default function Moninja() {
             }
           }
         } else {
-          // Handle regular objects
+          // Handle regular objects - each slash worth exactly 1 point
           newObjects[objIndex] = { ...obj, sliced: true };
           slashHitsThisFrame++;
           slashCenterX += lastPoint.x;
@@ -977,6 +964,7 @@ export default function Moninja() {
               setTimeout(() => playSound("game-over"), 2000);
             }
           } else {
+            // Each fruit slice is worth exactly 1 point
             pointsEarned += 1;
             if (canPlaySliceSound && !gameStateRef.current.gamePaused) {
               playSound("oof");
@@ -1007,7 +995,7 @@ export default function Moninja() {
         }
       }
 
-      // Handle combo effects
+      // Handle combo effects - no extra points, just visual/audio feedback
       if (slashHitsThisFrame >= 3) {
         const comboEffect: ComboEffect = {
           id: Date.now(),
@@ -1016,7 +1004,7 @@ export default function Moninja() {
           count: slashHitsThisFrame,
         };
         setComboEffects(prev => [...prev, comboEffect]);
-        pointsEarned += slashHitsThisFrame;
+        // No extra points for combos - each slash already counted as +1
 
         if (!gameStateRef.current.gamePaused) {
           playSound("combo");
@@ -1057,7 +1045,7 @@ export default function Moninja() {
         }, 2000);
       }
 
-      // Update score
+      // Update score - each successful slash adds exactly 1 point
       if (pointsEarned > 0) {
         updateScore(pointsEarned);
       }
@@ -1331,7 +1319,7 @@ export default function Moninja() {
   const gameStats: GameStats = useMemo(
     () => ({
       score: gameState.score,
-      objectsSliced: gameState.score,
+      objectsSliced: gameState.score, // Now equivalent since each slice = 1 point
       speedLevel: Math.floor(gameState.score / 50) + 1,
     }),
     [gameState.score]
@@ -1340,7 +1328,7 @@ export default function Moninja() {
   const resetGame = useCallback(() => {
     setGameState({
       score: 0,
-      localScore: 0,
+      // Removed localScore from reset
       submittedScore: 0,
       gameOver: false,
       gameStarted: false,

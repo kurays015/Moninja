@@ -1,7 +1,7 @@
+// app/api/game/start-session/route.ts
 import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
-import { randomUUID } from "crypto";
 import { cookies } from "next/headers";
+import { createGameSession, encryptSessionCookie } from "@/src/lib/sessions";
 
 export async function POST(request: Request) {
   try {
@@ -15,27 +15,33 @@ export async function POST(request: Request) {
       );
     }
 
-    const sessionId = randomUUID();
+    // Create session server-side only - no tokens returned to client
+    const session = await createGameSession(walletAddress, privy_token.value);
 
-    const payload = {
-      player: walletAddress,
-      sessionId,
-      privy_token,
-    };
+    console.log(session, "session!");
 
-    const sessionToken = jwt.sign(payload, process.env.JWT_SECRET!, {
-      expiresIn: "1h",
+    // Create encrypted HTTP-only cookie
+    const sessionCookie = await encryptSessionCookie({
+      sessionId: session.sessionId,
+      playerId: walletAddress,
     });
 
-    return NextResponse.json(
-      {
-        success: true,
-        sessionToken,
-        sessionId,
-        gameTime: Date.now(),
-      },
-      { status: 200 }
-    );
+    const response = NextResponse.json({
+      success: true,
+      gameTime: session.startTime,
+      // Remove sessionToken and sessionId from response
+    });
+
+    // Set HTTP-only cookie - invisible to client JavaScript
+    response.cookies.set("game_session", sessionCookie, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/",
+      maxAge: 3600, // 1 hour
+    });
+
+    return response;
   } catch (error) {
     console.error("Error creating game session:", error);
     return NextResponse.json(
