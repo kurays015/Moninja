@@ -40,7 +40,7 @@ export async function POST(request: Request) {
           Math.random().toString(36).substring(7) + Date.now().toString(36),
       },
       process.env.JWT_SECRET!,
-      { expiresIn: "1s" }
+      { expiresIn: "10s" }
     );
 
     return NextResponse.json({ nonce });
