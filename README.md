@@ -56,6 +56,12 @@ The game uses TanStack Query for all data operations:
    ```env
    NEXT_PUBLIC_PRIVY_APP_ID=your_privy_app_id
    NEXT_PUBLIC_MON_ID=your_mon_id
+   CONTRACT_ADDRESS=your_contract_address
+   JWT_SECRET=your_jwt_secret
+   GAME_ADDRESS=your_game_address
+   ARCJET_KEY=your_arcjet_key
+   PRIVATE_RPC=your_private_rpc
+   MONAD_CLIP_BASE_URL=monad_clip_base_url
    ```
 
 3. Run the development server:

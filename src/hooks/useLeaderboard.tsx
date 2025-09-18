@@ -34,6 +34,9 @@ export function useLeaderboard(page: number) {
       );
       return data;
     },
-    retry: 5,
+    retry: failureCount => {
+      if (failureCount >= 5) return false;
+      return true;
+    },
   });
 }

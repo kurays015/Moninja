@@ -7,7 +7,6 @@ import {
   SlashPoint,
   SliceEffect,
   StartButton,
-  SubmitScoreResponse,
 } from "../types";
 import { useCrossAppAccount } from "../hooks/useCrossAppAccount";
 import Image from "next/image";
@@ -25,19 +24,18 @@ import { usePlayerTotalScore } from "../hooks/usePlayerTotalScore";
 import { useUsername } from "../hooks/useUsername";
 import { useGameSession } from "../hooks/useGameSession";
 import PauseButton from "./PauseButton";
-import { toast } from "react-toastify";
-import TransactionToast from "./TransactionToast";
 import ResponsiveUserProfile from "./PlayerStatusPanel";
 import { ObjectPool } from "../lib/ObjectPool";
 import { MONANIMAL_IMAGES } from "../lib/monanimalsImages";
-import { getSpeedMultiplier } from "../lib/getSpeedMultiplier";
+import {
+  getSpeedMultiplierBalanced,
+  getVerticalSpeedMultiplier,
+} from "../lib/getSpeedMultiplier";
 import { GAME_CONFIG } from "../lib/gameConfig";
 
 export default function Moninja() {
-  // Consolidated game state
   const [gameState, setGameState] = useState<GameState>({
     score: 0,
-    localScore: 0,
     submittedScore: 0,
     gameOver: false,
     gameStarted: false,
@@ -52,7 +50,6 @@ export default function Moninja() {
     isSubmitting: false,
   });
 
-  // Individual states that change frequently (keep separate for performance)
   const [objects, setObjects] = useState<GameObject[]>([]);
   const [startButton, setStartButton] = useState<StartButton | null>(null);
   const [slashPath, setSlashPath] = useState<SlashPoint[]>([]);
@@ -61,8 +58,7 @@ export default function Moninja() {
   const [frenzyNotification, setFrenzyNotification] = useState<string | null>(
     ""
   );
-  const [gameSessionToken, setGameSessionToken] = useState<string | null>(null);
-  const [gameSessionId, setGameSessionId] = useState<string | null>(null);
+  const [hasActiveSession, setHasActiveSession] = useState<boolean>(false);
 
   // Refs
   const gameAreaRef = useRef<HTMLDivElement>(null);
@@ -71,13 +67,11 @@ export default function Moninja() {
     spawnInterval: NodeJS.Timeout | null;
     frenzyTimer: NodeJS.Timeout | null;
     frenzyWaveTimer: NodeJS.Timeout | null;
-    submitTimeout: NodeJS.Timeout | null;
     frenzyCountdown: NodeJS.Timeout | null;
   }>({
     spawnInterval: null,
     frenzyTimer: null,
     frenzyWaveTimer: null,
-    submitTimeout: null,
     frenzyCountdown: null,
   });
 
@@ -101,13 +95,11 @@ export default function Moninja() {
   const { data: playerScoreData, isLoading: isScoreLoading } =
     usePlayerTotalScore({
       walletAddress,
-      gameStarted: gameState.gameStarted,
-      gameOver: gameState.gameOver,
     });
   const { data: usernameData, isLoading: isLoadingUserName } =
     useUsername(walletAddress);
-  const { startGameSession, endGameSession, submitScore } =
-    useGameSession(gameSessionToken);
+  const { startGameSession, endGameSession, submitScore, generateNonce } =
+    useGameSession();
 
   // Update refs when state changes
   useEffect(() => {
@@ -152,12 +144,10 @@ export default function Moninja() {
       spawnInterval: null,
       frenzyTimer: null,
       frenzyWaveTimer: null,
-      submitTimeout: null,
       frenzyCountdown: null,
     };
   }, []);
 
-  // Updated createObject function with progressive speed and mobile landscape fix
   const createObject = useCallback(
     (
       startX: number,
@@ -176,14 +166,20 @@ export default function Moninja() {
         ? "monad.svg"
         : MONANIMAL_IMAGES[Math.floor(Math.random() * MONANIMAL_IMAGES.length)];
 
-      // Calculate speed multiplier based on current score
-      const speedMultiplier = getSpeedMultiplier(gameStateRef.current.score);
+      // Calculate separate multipliers for different aspects
+      const horizontalSpeedMultiplier = getSpeedMultiplierBalanced(
+        gameStateRef.current.score
+      );
+      const verticalSpeedMultiplier = getVerticalSpeedMultiplier(
+        gameStateRef.current.score
+      );
+      const rotationMultiplier = Math.min(horizontalSpeedMultiplier, 1.8); // Cap rotation scaling
 
       // Detect landscape mode and adjust velocities accordingly
       const screenWidth = window.innerWidth;
       const screenHeight = window.innerHeight;
       const isLandscape = screenWidth > screenHeight;
-      const isMobile = screenWidth <= 768; // Typical mobile breakpoint
+      const isMobile = screenWidth <= 768;
       const isLandscapeMobile = isLandscape && isMobile;
 
       // Set base speeds based on orientation
@@ -191,38 +187,47 @@ export default function Moninja() {
       let baseVelocityY, maxVelocityY;
 
       if (isLandscapeMobile) {
-        // Use specific mobile landscape values
         baseVelocityY = GAME_CONFIG.MOBILE_LANDSCAPE_BASE_VELOCITY_Y;
         maxVelocityY = GAME_CONFIG.MOBILE_LANDSCAPE_MAX_VELOCITY_Y;
       } else {
-        // Use normal values for portrait and desktop
         baseVelocityY = GAME_CONFIG.BASE_VELOCITY_Y;
         maxVelocityY = GAME_CONFIG.MAX_VELOCITY_Y;
       }
 
       const baseRotationSpeed = GAME_CONFIG.BASE_ROTATION_SPEED;
 
-      // Apply speed multiplier with adjusted base speeds
+      // Apply different multipliers for horizontal vs vertical movement
       const velocityXRange = Math.min(
         GAME_CONFIG.MAX_VELOCITY_X,
-        baseVelocityX * speedMultiplier
+        baseVelocityX * horizontalSpeedMultiplier
       );
+
+      // Use screen height to scale vertical velocity appropriately
+      const screenHeightFactor = Math.min(screenHeight / 800, 1.5); // Normalize to 800px base
       const velocityYRange = Math.min(
-        maxVelocityY,
-        baseVelocityY * speedMultiplier
+        maxVelocityY * screenHeightFactor,
+        baseVelocityY * verticalSpeedMultiplier * screenHeightFactor
       );
+
       const rotationSpeedRange = Math.min(
         GAME_CONFIG.MAX_ROTATION_SPEED,
-        baseRotationSpeed * speedMultiplier
+        baseRotationSpeed * rotationMultiplier
       );
 
       // Frenzy mode gets additional speed boost
-      const frenzyMultiplier = frenzyMode ? 1.3 : 1.0;
-
-      // Adjust gravity based on screen orientation for better arc control
+      const frenzyMultiplier = frenzyMode
+        ? isLandscapeMobile
+          ? 1.8
+          : 1.5 // faster in landscape mobile
+        : 1;
+      // Adjust gravity based on screen size and orientation
       let gravity = frenzyMode ? 0.25 : 0.35;
+
+      // Scale gravity with screen height to maintain consistent arc feel
+      gravity *= Math.max(screenHeight / 800, 0.8);
+
       if (isLandscapeMobile) {
-        gravity *= 1.2; // Increase gravity in landscape to bring objects down faster
+        gravity *= 1.2;
       }
 
       const obj: GameObject = {
@@ -262,114 +267,112 @@ export default function Moninja() {
     [playSound]
   );
 
-  // Batch score submission with debouncing
-  const submitScoreBatch = useCallback(
-    async (finalScore?: number) => {
-      const scoreToSubmit = finalScore || gameStateRef.current.localScore;
-      const scoreDifference =
-        scoreToSubmit - gameStateRef.current.submittedScore;
+  const updateScore = useCallback((points: number) => {
+    setGameState(prev => {
+      const newScore = prev.score + points;
+      return { ...prev, score: newScore };
+    });
+  }, []);
 
-      if (scoreDifference <= 0 || gameStateRef.current.isSubmitting) return;
-
-      updateGameState({ isSubmitting: true });
-
-      try {
-        const data: SubmitScoreResponse = await new Promise(
-          (resolve, reject) => {
-            submitScore.mutate(
-              {
-                player: walletAddress!,
-                transactionAmount: 1,
-                scoreAmount: scoreDifference,
-                sessionId: gameSessionId!,
-              },
-              { onSuccess: resolve, onError: reject }
-            );
-          }
-        );
-
-        updateGameState({
-          submittedScore: scoreToSubmit,
-          isSubmitting: false,
-        });
-
-        toast(<TransactionToast transactionsInfo={data} />, {
-          autoClose: 4000,
-          closeOnClick: false,
-          pauseOnHover: true,
-          draggable: false,
-          style: {
-            background: "rgba(17, 24, 39, 0.95)",
-            border: "1px solid rgba(59, 130, 246, 0.2)",
-            borderRadius: "8px",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-            padding: "0",
-            margin: "0",
-          },
-        });
-      } catch (error) {
-        console.error("Error submitting score batch:", error);
-        updateGameState({ isSubmitting: false });
-      }
-    },
-    [walletAddress, gameSessionId, submitScore, updateGameState]
-  );
-
-  // Debounced score submission
-  const debouncedSubmit = useCallback(() => {
-    if (timersRef.current.submitTimeout) {
-      clearTimeout(timersRef.current.submitTimeout);
-    }
-    timersRef.current.submitTimeout = setTimeout(() => {
-      submitScoreBatch();
-    }, GAME_CONFIG.SUBMIT_DEBOUNCE);
-  }, [submitScoreBatch]);
-
-  // Optimized score update
-  const updateScore = useCallback(
-    (points: number) => {
-      setGameState(prev => {
-        const newLocalScore = prev.localScore + points;
-        const newScore = prev.score + points;
-        debouncedSubmit();
-        return { ...prev, localScore: newLocalScore, score: newScore };
-      });
-    },
-    [debouncedSubmit]
-  );
-
-  // 2. Optimized createFrenzyWave with staggered spawning for smoothness
   const createFrenzyWave = useCallback(() => {
     if (gameStateRef.current.gamePaused || gameStateRef.current.bombHit) return;
 
     if (hasVisibleBombOrMonad) return;
 
     console.log("Creating frenzy wave");
-    const waveSize =
-      Math.floor(Math.random() * 4) + GAME_CONFIG.FRENZY_WAVE_SIZE.min; // Reduced randomness range
-    const rect = gameAreaRef.current?.getBoundingClientRect();
-    const maxWidth = (rect ? rect.width : window.innerWidth) - 100;
-    const positions: number[] = [];
 
-    // Pre-calculate positions with better distribution
-    for (let i = 0; i < waveSize; i++) {
-      let attempts = 0;
-      let x: number;
-      do {
-        x = Math.random() * maxWidth;
-        attempts++;
-      } while (
-        attempts < 15 && // Reduced attempts for faster generation
-        positions.some(
-          pos => Math.abs(pos - x) < GAME_CONFIG.FRENZY_MIN_SPACING
-        )
-      );
-      positions.push(x);
+    // Detect mobile landscape mode
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    const isLandscape = screenWidth > screenHeight;
+    const isMobile = screenWidth <= 768;
+    const isLandscapeMobile = isLandscape && isMobile;
+
+    // Adjust wave size for mobile landscape - make it bigger for better spread
+    const baseWaveSize = isLandscapeMobile
+      ? Math.floor(Math.random() * 3) + 6 // 6-8 objects for mobile landscape
+      : Math.floor(Math.random() * 4) + GAME_CONFIG.FRENZY_WAVE_SIZE.min; // Original: 4-7
+
+    const waveSize = baseWaveSize;
+    const rect = gameAreaRef.current?.getBoundingClientRect();
+
+    // Calculate available width with better mobile landscape handling
+    let maxWidth: number;
+    let minMargin: number;
+
+    if (isLandscapeMobile) {
+      // Use more of the screen width in mobile landscape
+      minMargin = 60; // Reduced margin from default
+      maxWidth = (rect ? rect.width : screenWidth) - minMargin * 2;
+    } else {
+      // Desktop/portrait mobile - original logic
+      minMargin = 50;
+      maxWidth = (rect ? rect.width : window.innerWidth) - 100;
     }
 
-    // Staggered object creation for smoother performance
+    const positions: number[] = [];
+
+    // Better position distribution algorithm for mobile landscape
+    if (isLandscapeMobile) {
+      // For mobile landscape, use a grid-like distribution to ensure better spread
+      const sections = Math.min(waveSize, 6); // Divide screen into sections
+      const sectionWidth = maxWidth / sections;
+
+      for (let i = 0; i < waveSize; i++) {
+        let x: number;
+        if (i < sections) {
+          // First objects - one per section for guaranteed spread
+          const sectionCenter = (i + 0.5) * sectionWidth;
+          const randomOffset = (Math.random() - 0.5) * (sectionWidth * 0.6); // 60% of section width
+          x = minMargin + sectionCenter + randomOffset;
+        } else {
+          // Additional objects - random but with collision avoidance
+          let attempts = 0;
+          do {
+            x = minMargin + Math.random() * maxWidth;
+            attempts++;
+          } while (
+            attempts < 20 &&
+            positions.some(
+              pos => Math.abs(pos - x) < GAME_CONFIG.FRENZY_MIN_SPACING
+            )
+          );
+        }
+
+        // Clamp to valid range
+        x = Math.max(minMargin, Math.min(minMargin + maxWidth, x));
+        positions.push(x);
+      }
+    } else {
+      // Desktop/portrait - original algorithm but improved
+      for (let i = 0; i < waveSize; i++) {
+        let attempts = 0;
+        let x: number;
+        do {
+          x = Math.random() * maxWidth;
+          attempts++;
+        } while (
+          attempts < 15 &&
+          positions.some(
+            pos => Math.abs(pos - x) < GAME_CONFIG.FRENZY_MIN_SPACING
+          )
+        );
+        positions.push(x);
+      }
+    }
+
+    console.log(
+      `Frenzy wave positions for ${
+        isLandscapeMobile ? "mobile landscape" : "desktop/portrait"
+      }:`,
+      positions
+    );
+
+    // Staggered object creation - faster timing for mobile landscape
+    const staggerDelay = isLandscapeMobile ? 60 : 80; // Faster spawning on mobile landscape
+
     positions.forEach((x, index) => {
-      const delay = index * 80; // Small delay between each object (80ms)
+      const delay = index * staggerDelay;
 
       setTimeout(() => {
         // Double-check game state before creating object
@@ -385,7 +388,7 @@ export default function Moninja() {
     });
   }, [createObject, hasVisibleBombOrMonad]);
 
-  // 3. Fixed frenzy management with proper trigger detection
+  //Fixed frenzy management with proper trigger detection
   const manageFrenzyMode = useCallback(() => {
     const { score, frenzyMode, gamePaused, bombHit } = gameStateRef.current;
 
@@ -484,6 +487,8 @@ export default function Moninja() {
 
     if (gamePaused || gameOver || bombHit) return;
 
+    if (gameState.isMonadSlashing) return;
+
     console.log("Creating object wave, score:", score);
 
     // Check frenzy trigger
@@ -529,9 +534,9 @@ export default function Moninja() {
         }
       }, i * 200);
     });
-  }, [createObject, manageFrenzyMode]);
+  }, [createObject, manageFrenzyMode, gameState.isMonadSlashing]);
 
-  // 4. Improved game spawning with better frenzy integration
+  //Improved game spawning with better frenzy integration
   useEffect(() => {
     if (
       gameState.gameStarted &&
@@ -615,7 +620,7 @@ export default function Moninja() {
   useEffect(() => {
     if (
       gameState.gameStarted &&
-      !gameSessionId &&
+      !hasActiveSession &&
       walletAddress &&
       !gameState.gameOver &&
       !gameState.bombHit &&
@@ -624,9 +629,8 @@ export default function Moninja() {
       startGameSession.mutate(
         { walletAddress: walletAddress! },
         {
-          onSuccess: data => {
-            setGameSessionToken(data.sessionToken);
-            setGameSessionId(data.sessionId);
+          onSuccess: () => {
+            setHasActiveSession(true); // Only track that session exists
           },
           onError: error => {
             console.error("Error starting game session:", error);
@@ -636,50 +640,74 @@ export default function Moninja() {
     }
   }, [
     gameState.gameStarted,
-    gameSessionId,
     walletAddress,
     gameState.gameOver,
     gameState.bombHit,
     startGameSession,
+    hasActiveSession,
   ]);
 
-  // Game over handling effect
+  const submitFinalScore = useCallback(
+    async (finalScore: number) => {
+      if (finalScore <= 0) return;
+
+      updateGameState({ isSubmitting: true });
+
+      try {
+        // Generate nonce only when game is actually over
+        const nonce = await generateNonce.mutateAsync({
+          player: walletAddress!,
+        });
+
+        await submitScore.mutateAsync({
+          player: walletAddress!,
+          transactionAmount: 1,
+          scoreAmount: finalScore,
+          nonce,
+        });
+
+        updateGameState({
+          submittedScore: finalScore,
+          isSubmitting: false,
+        });
+      } catch (error) {
+        console.error("Error submitting final score:", error);
+        updateGameState({ isSubmitting: false });
+      }
+    },
+    [walletAddress, submitScore, updateGameState, generateNonce]
+  );
+
+  // Game over handler
   useEffect(() => {
     if (gameState.gameOver && !gameState.gameEnded) {
       updateGameState({ gameEnded: true });
 
       // End game session
-      if (gameSessionId) {
-        endGameSession.mutate(
-          { sessionId: gameSessionId },
-          {
-            onSuccess: () => {
-              setGameSessionToken(null);
-              setGameSessionId(null);
-            },
-            onError: error => {
-              console.error("Error ending game session:", error);
-              setGameSessionToken(null);
-              setGameSessionId(null);
-            },
-          }
-        );
+      if (hasActiveSession) {
+        // Changed from gameSessionId check
+        endGameSession.mutate(undefined, {
+          onSuccess: () => {
+            setHasActiveSession(false); // Only track session state
+            // Remove: setGameSessionToken and setGameSessionId
+          },
+          onError: error => {
+            console.error("Error ending game session:", error);
+            setHasActiveSession(false);
+          },
+        });
       }
 
-      // Submit final score
-      if (timersRef.current.submitTimeout) {
-        clearTimeout(timersRef.current.submitTimeout);
-      }
-      submitScoreBatch(gameState.localScore);
+      submitFinalScore(gameState.score);
     }
   }, [
     gameState.gameOver,
     gameState.gameEnded,
-    gameSessionId,
     endGameSession,
-    submitScoreBatch,
     updateGameState,
-    gameState.localScore,
+    hasActiveSession,
+    gameState.score,
+    submitFinalScore,
   ]);
 
   // Window visibility handling effect
@@ -713,7 +741,7 @@ export default function Moninja() {
     };
   }, [gameState.gameStarted, gameState.gameOver, updateGameState]);
 
-  // Collision detection and game logic (rest of the component remains the same)
+  // Collision detection and game logic - SIMPLIFIED SCORING
   const checkSlashCollisions = useCallback(() => {
     if (
       slashPath.length < 2 ||
@@ -743,12 +771,12 @@ export default function Moninja() {
 
       if (distance < 80) {
         // Create watermelon slice effect
-        const watermelonSliceEffect: SliceEffect = {
+        const monadSliceEffect: SliceEffect = {
           id: Date.now() + Math.random(),
           x: startButton.x,
           y: startButton.y,
           type: "fruit",
-          imageSrc: "/Watermelon.svg",
+          imageSrc: "/monad.svg",
           width: 160,
           height: 160,
           angle:
@@ -760,12 +788,12 @@ export default function Moninja() {
             Math.PI,
         };
 
-        setSliceEffects(prev => [...prev, watermelonSliceEffect]);
+        setSliceEffects(prev => [...prev, monadSliceEffect]);
 
         // Remove slice effect after animation
         setTimeout(() => {
           setSliceEffects(prev =>
-            prev.filter(effect => effect.id !== watermelonSliceEffect.id)
+            prev.filter(effect => effect.id !== monadSliceEffect.id)
           );
         }, 1200);
 
@@ -781,11 +809,11 @@ export default function Moninja() {
       }
     }
 
-    // Optimized object collision detection
+    // Optimized object collision detection with simplified scoring
     setObjects(prevObjects => {
       const newObjects = [...prevObjects];
       const newSliceEffects: SliceEffect[] = [];
-      let pointsEarned = 0;
+      let pointsEarned = 0; // Will be incremented by 1 for each successful slash
 
       for (let objIndex = 0; objIndex < newObjects.length; objIndex++) {
         const obj = newObjects[objIndex];
@@ -812,7 +840,6 @@ export default function Moninja() {
         const lastPoint = slashPath[slashPath.length - 1];
         const secondLastPoint = slashPath[slashPath.length - 2] || lastPoint;
 
-        // Handle different object types
         if (obj.type === "monad") {
           const currentSlashCount = obj.slashCount || 0;
           const maxSlashCount = obj.maxSlashCount || 10;
@@ -830,8 +857,8 @@ export default function Moninja() {
             }
 
             updateGameState({ monadSlashCount: newSlashCount });
-            const pointsPerSlash = obj.pointsPerSlash || 5;
-            pointsEarned += pointsPerSlash;
+            // Each monad slash is worth exactly 5 point
+            pointsEarned += 5;
 
             if (!gameStateRef.current.gamePaused) {
               playSound(
@@ -839,7 +866,7 @@ export default function Moninja() {
               );
             }
 
-            // ADD THIS BACK - Create monad slice effects!
+            // Create monad slice effects
             if (newSlashCount >= maxSlashCount) {
               // Final monad destruction - create explosion effect
               newSliceEffects.push({
@@ -880,7 +907,7 @@ export default function Moninja() {
             }
           }
         } else {
-          // Handle regular objects
+          // Handle regular objects - each slash worth exactly 1 point
           newObjects[objIndex] = { ...obj, sliced: true };
           slashHitsThisFrame++;
           slashCenterX += lastPoint.x;
@@ -894,6 +921,7 @@ export default function Moninja() {
               setTimeout(() => playSound("game-over"), 2000);
             }
           } else {
+            // Each fruit slice is worth exactly 1 point
             pointsEarned += 1;
             if (canPlaySliceSound && !gameStateRef.current.gamePaused) {
               playSound("oof");
@@ -924,7 +952,7 @@ export default function Moninja() {
         }
       }
 
-      // Handle combo effects
+      // Handle combo effects - no extra points, just visual/audio feedback
       if (slashHitsThisFrame >= 3) {
         const comboEffect: ComboEffect = {
           id: Date.now(),
@@ -933,7 +961,7 @@ export default function Moninja() {
           count: slashHitsThisFrame,
         };
         setComboEffects(prev => [...prev, comboEffect]);
-        pointsEarned += slashHitsThisFrame;
+        // No extra points for combos - each slash already counted as +1
 
         if (!gameStateRef.current.gamePaused) {
           playSound("combo");
@@ -974,7 +1002,7 @@ export default function Moninja() {
         }, 2000);
       }
 
-      // Update score
+      // Update score - each successful slash adds exactly 1 point
       if (pointsEarned > 0) {
         updateScore(pointsEarned);
       }
@@ -1248,7 +1276,7 @@ export default function Moninja() {
   const gameStats: GameStats = useMemo(
     () => ({
       score: gameState.score,
-      objectsSliced: gameState.score,
+      objectsSliced: gameState.score, // Now equivalent since each slice = 1 point
       speedLevel: Math.floor(gameState.score / 50) + 1,
     }),
     [gameState.score]
@@ -1257,7 +1285,7 @@ export default function Moninja() {
   const resetGame = useCallback(() => {
     setGameState({
       score: 0,
-      localScore: 0,
+      // Removed localScore from reset
       submittedScore: 0,
       gameOver: false,
       gameStarted: false,
@@ -1343,7 +1371,7 @@ export default function Moninja() {
       !startButton.sliced ? (
         <div className="h-screen flex flex-col items-center justify-center gap-4 z-40 select-none">
           <Image
-            src="/Watermelon.svg"
+            src="/monad.svg"
             alt="start-watermelon"
             width={160}
             height={160}

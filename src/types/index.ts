@@ -84,8 +84,7 @@ export interface StartGameSessionRequest {
 }
 
 export interface StartGameSessionResponse {
-  sessionToken: string;
-  sessionId: string;
+  gameTime: number | undefined;
 }
 
 export interface EndGameSessionRequest {
@@ -96,7 +95,7 @@ export interface SubmitScoreRequest {
   player: string;
   transactionAmount: number;
   scoreAmount: number;
-  sessionId: string;
+  nonce: string;
 }
 
 export interface SubmitScoreResponse {
@@ -121,7 +120,6 @@ export interface PlayerScoreResponse {
 
 export interface GameState {
   score: number;
-  localScore: number;
   submittedScore: number;
   gameOver: boolean;
   gameStarted: boolean;
@@ -134,4 +132,23 @@ export interface GameState {
   frenzyMode: boolean;
   frenzyTimeRemaining: number;
   isSubmitting: boolean;
+}
+
+export interface GameSession {
+  sessionId: string;
+  player: string;
+  privy_token: string;
+  startTime: number;
+  isActive: boolean;
+}
+
+export interface NoncePayload {
+  sessionId: string;
+  player: string;
+  timestamp: number;
+  random: string;
+}
+
+export interface GenerateNonceRequest {
+  player: string;
 }
