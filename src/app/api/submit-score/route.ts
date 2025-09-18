@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     const decision = await aj.protect(request, {
       userId: player || privy_token?.value,
       requested: 1,
-    }); // Deduct 5 tokens from the bucket
+    });
 
     if (decision.isDenied()) {
       //rate limited
@@ -78,20 +78,24 @@ export async function POST(request: Request) {
     }
 
     if (!session || !session.isActive) {
-      console.error("❌ No valid session found");
+      console.error("❌ Please play the game first");
       return NextResponse.json(
-        { error: "No valid session found" },
+        { error: "Please play the game first" },
         { status: 401 }
       );
     }
 
     // Verify the session belongs to the player (case-insensitive)
     if (session.player.toLowerCase() !== String(player).toLowerCase()) {
-      console.error("❌ Session player mismatch:", {
+      console.error("❌ Please play the game first:", {
         sessionPlayer: session.player,
         requestPlayer: player,
       });
-      return NextResponse.json({ error: "Session mismatch" }, { status: 401 });
+
+      return NextResponse.json(
+        { error: "Error, Please play the game first" },
+        { status: 401 }
+      );
     }
 
     console.log("✅ Session validated:", {

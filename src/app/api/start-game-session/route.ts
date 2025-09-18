@@ -1,4 +1,3 @@
-// app/api/game/start-session/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createGameSession, encryptSessionCookie } from "@/src/lib/sessions";
@@ -17,8 +16,6 @@ export async function POST(request: Request) {
 
     // Create session server-side only - no tokens returned to client
     const session = await createGameSession(walletAddress, privy_token.value);
-
-    console.log(session, "session!");
 
     // Create encrypted HTTP-only cookie
     const sessionCookie = await encryptSessionCookie({

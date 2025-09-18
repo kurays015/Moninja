@@ -150,3 +150,8 @@ export interface NoncePayload {
   gameStartTime: number;
   random: string;
 }
+
+export interface GenerateNonceRequest {
+  player: string;
+  gameStartTime?: number;
+}

@@ -1,4 +1,3 @@
-// app/api/game/end-session/route.ts
 import { getSessionFromRequest } from "@/src/lib/getSessionFromRequest";
 import { redis } from "@/src/lib/nonceStore"; // Import your redis instance
 import { NextResponse } from "next/server";
