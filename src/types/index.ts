@@ -96,7 +96,6 @@ export interface SubmitScoreRequest {
   transactionAmount: number;
   scoreAmount: number;
   nonce: string;
-  gameStartTime?: number;
 }
 
 export interface SubmitScoreResponse {
@@ -147,11 +146,9 @@ export interface NoncePayload {
   sessionId: string;
   player: string;
   timestamp: number;
-  gameStartTime: number;
   random: string;
 }
 
 export interface GenerateNonceRequest {
   player: string;
-  gameStartTime?: number;
 }

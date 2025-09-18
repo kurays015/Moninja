@@ -8,23 +8,23 @@ export async function POST(request: Request) {
 
     if (!session || !session.isActive) {
       return NextResponse.json(
-        { message: "Please play the game first" },
+        { error: "Please play the game first" },
         { status: 401 }
       );
     }
 
-    const { player, gameStartTime } = await request.json();
+    const { player } = await request.json();
 
     if (!player) {
       return NextResponse.json(
-        { message: "Please play the game first" },
+        { error: "Please play the game first" },
         { status: 400 }
       );
     }
 
     if (player.toLowerCase() !== session.player.toLowerCase()) {
       return NextResponse.json(
-        { message: "Please play the game first" },
+        { error: "Please play the game first" },
         { status: 401 }
       );
     }
@@ -35,18 +35,18 @@ export async function POST(request: Request) {
         sessionId: session.sessionId,
         player: session.player,
         timestamp: Date.now(),
-        gameStartTime: gameStartTime || session.startTime,
+        gameStartTime: session.startTime,
         random:
           Math.random().toString(36).substring(7) + Date.now().toString(36),
       },
       process.env.JWT_SECRET!,
-      { expiresIn: "10s" }
+      { expiresIn: "3s" }
     );
 
     return NextResponse.json({ nonce });
   } catch (error) {
     return NextResponse.json(
-      { message: "Failed to generate nonce", error },
+      { error: "Failed to generate nonce", errorDetail: error },
       { status: 500 }
     );
   }

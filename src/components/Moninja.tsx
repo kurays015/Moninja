@@ -24,8 +24,6 @@ import { usePlayerTotalScore } from "../hooks/usePlayerTotalScore";
 import { useUsername } from "../hooks/useUsername";
 import { useGameSession } from "../hooks/useGameSession";
 import PauseButton from "./PauseButton";
-// import { toast } from "react-toastify";
-// import TransactionToast from "./TransactionToast";
 import ResponsiveUserProfile from "./PlayerStatusPanel";
 import { ObjectPool } from "../lib/ObjectPool";
 import { MONANIMAL_IMAGES } from "../lib/monanimalsImages";
@@ -69,13 +67,11 @@ export default function Moninja() {
     spawnInterval: NodeJS.Timeout | null;
     frenzyTimer: NodeJS.Timeout | null;
     frenzyWaveTimer: NodeJS.Timeout | null;
-    submitTimeout: NodeJS.Timeout | null;
     frenzyCountdown: NodeJS.Timeout | null;
   }>({
     spawnInterval: null,
     frenzyTimer: null,
     frenzyWaveTimer: null,
-    submitTimeout: null,
     frenzyCountdown: null,
   });
 
@@ -99,8 +95,6 @@ export default function Moninja() {
   const { data: playerScoreData, isLoading: isScoreLoading } =
     usePlayerTotalScore({
       walletAddress,
-      gameStarted: gameState.gameStarted,
-      gameOver: gameState.gameOver,
     });
   const { data: usernameData, isLoading: isLoadingUserName } =
     useUsername(walletAddress);
@@ -150,7 +144,6 @@ export default function Moninja() {
       spawnInterval: null,
       frenzyTimer: null,
       frenzyWaveTimer: null,
-      submitTimeout: null,
       frenzyCountdown: null,
     };
   }, []);
@@ -274,75 +267,12 @@ export default function Moninja() {
     [playSound]
   );
 
-  // Simplified score submission - now only works with single score
-  const submitScoreBatch = useCallback(
-    async (finalScore?: number) => {
-      const scoreToSubmit = finalScore || gameStateRef.current.score;
-      const scoreDifference =
-        scoreToSubmit - gameStateRef.current.submittedScore;
-
-      if (scoreDifference <= 0 || gameStateRef.current.isSubmitting) return;
-
-      updateGameState({ isSubmitting: true });
-
-      try {
-        // Generate nonce before submitting
-
-        const nonce = await generateNonce.mutateAsync({
-          player: walletAddress!,
-          gameStartTime: startGameSession.data?.gameTime,
-        });
-
-        await new Promise((resolve, reject) => {
-          submitScore.mutate(
-            {
-              player: walletAddress!,
-              transactionAmount: 1,
-              scoreAmount: scoreDifference,
-              nonce,
-            },
-            { onSuccess: resolve, onError: reject }
-          );
-        });
-
-        updateGameState({
-          submittedScore: scoreToSubmit,
-          isSubmitting: false,
-        });
-      } catch (error) {
-        console.error("Error submitting score batch:", error);
-        updateGameState({ isSubmitting: false });
-      }
-    },
-    [
-      walletAddress,
-      submitScore,
-      updateGameState,
-      generateNonce,
-      startGameSession.data?.gameTime,
-    ]
-  );
-
-  // Debounced score submission
-  const debouncedSubmit = useCallback(() => {
-    if (timersRef.current.submitTimeout) {
-      clearTimeout(timersRef.current.submitTimeout);
-    }
-    timersRef.current.submitTimeout = setTimeout(() => {
-      submitScoreBatch();
-    }, GAME_CONFIG.SUBMIT_DEBOUNCE);
-  }, [submitScoreBatch]);
-
-  const updateScore = useCallback(
-    (points: number) => {
-      setGameState(prev => {
-        const newScore = prev.score + points;
-        debouncedSubmit();
-        return { ...prev, score: newScore };
-      });
-    },
-    [debouncedSubmit]
-  );
+  const updateScore = useCallback((points: number) => {
+    setGameState(prev => {
+      const newScore = prev.score + points;
+      return { ...prev, score: newScore };
+    });
+  }, []);
 
   const createFrenzyWave = useCallback(() => {
     if (gameStateRef.current.gamePaused || gameStateRef.current.bombHit) return;
@@ -717,7 +647,38 @@ export default function Moninja() {
     hasActiveSession,
   ]);
 
-  // Game over handling effect - simplified to use single score
+  const submitFinalScore = useCallback(
+    async (finalScore: number) => {
+      if (finalScore <= 0) return;
+
+      updateGameState({ isSubmitting: true });
+
+      try {
+        // Generate nonce only when game is actually over
+        const nonce = await generateNonce.mutateAsync({
+          player: walletAddress!,
+        });
+
+        await submitScore.mutateAsync({
+          player: walletAddress!,
+          transactionAmount: 1,
+          scoreAmount: finalScore,
+          nonce,
+        });
+
+        updateGameState({
+          submittedScore: finalScore,
+          isSubmitting: false,
+        });
+      } catch (error) {
+        console.error("Error submitting final score:", error);
+        updateGameState({ isSubmitting: false });
+      }
+    },
+    [walletAddress, submitScore, updateGameState, generateNonce]
+  );
+
+  // Game over handler
   useEffect(() => {
     if (gameState.gameOver && !gameState.gameEnded) {
       updateGameState({ gameEnded: true });
@@ -737,20 +698,16 @@ export default function Moninja() {
         });
       }
 
-      // Submit final score
-      if (timersRef.current.submitTimeout) {
-        clearTimeout(timersRef.current.submitTimeout);
-      }
-      submitScoreBatch(gameState.score);
+      submitFinalScore(gameState.score);
     }
   }, [
     gameState.gameOver,
     gameState.gameEnded,
     endGameSession,
-    submitScoreBatch,
     updateGameState,
     hasActiveSession,
-    gameState.score, // Changed from localScore to score
+    gameState.score,
+    submitFinalScore,
   ]);
 
   // Window visibility handling effect

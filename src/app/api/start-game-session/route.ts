@@ -16,7 +16,6 @@ export async function POST(request: Request) {
 
     // Create session server-side only - no tokens returned to client
     const session = await createGameSession(walletAddress, privy_token.value);
-
     // Create encrypted HTTP-only cookie
     const sessionCookie = await encryptSessionCookie({
       sessionId: session.sessionId,
@@ -25,8 +24,6 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({
       success: true,
-      gameTime: session.startTime,
-      // Remove sessionToken and sessionId from response
     });
 
     // Set HTTP-only cookie - invisible to client JavaScript
