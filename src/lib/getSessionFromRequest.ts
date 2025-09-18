@@ -16,7 +16,7 @@ export async function getSessionFromRequest() {
       return null;
     }
 
-    const session = getActiveSession(decrypted.sessionId);
+    const session = await getActiveSession(decrypted.sessionId);
 
     return session;
   } catch (error) {

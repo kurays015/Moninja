@@ -1,6 +1,6 @@
 // app/api/game/end-session/route.ts
 import { getSessionFromRequest } from "@/src/lib/getSessionFromRequest";
-import { endSession } from "@/src/lib/sessions";
+import { redis } from "@/src/lib/nonceStore"; // Import your redis instance
 import { NextResponse } from "next/server";
 
 export async function POST() {
@@ -14,22 +14,17 @@ export async function POST() {
       );
     }
 
-    // End the session
-    const ended = await endSession(session.sessionId);
+    // Instead of ending immediately, set TTL to 10 seconds
+    await redis.expire(`session:${session.sessionId}`, 10);
 
-    if (ended) {
-      const response = NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true });
 
-      // Clear the session cookie
-      response.cookies.delete("game_session");
+    // Clear the session cookie immediately (so frontend knows it's ended)
+    response.cookies.delete("game_session");
 
-      return response;
-    }
+    console.log(`⏳ Session ${session.sessionId} will expire in 10 seconds`);
 
-    return NextResponse.json(
-      { message: "Failed to end session" },
-      { status: 500 }
-    );
+    return response;
   } catch (error) {
     console.error("Error ending session:", error);
     return NextResponse.json(
