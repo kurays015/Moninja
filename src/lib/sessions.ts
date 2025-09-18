@@ -31,7 +31,6 @@ export async function getActiveSession(
   sessionId: string
 ): Promise<GameSession | null> {
   const data = await redis.get(`session:${sessionId}`);
-  console.log(data, " DATAA");
   if (!data) return null;
   if (typeof data === "string") {
     try {

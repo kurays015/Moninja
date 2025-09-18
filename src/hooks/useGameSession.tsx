@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, apiEndpoints } from "../lib/api";
 import {
+  GenerateNonceRequest,
   StartGameSessionRequest,
   StartGameSessionResponse,
   SubmitScoreRequest,
@@ -52,9 +53,21 @@ export function useGameSession() {
     },
   });
 
+  const generateNonce = useMutation({
+    mutationFn: async (data: GenerateNonceRequest): Promise<string> => {
+      const dynamicEndpoint = apiEndpoints.generateNonce();
+
+      const response = await api.post(dynamicEndpoint, data);
+      console.log(response);
+      return response.data.nonce;
+    },
+    retry: false,
+  });
+
   return {
     startGameSession,
     endGameSession,
     submitScore,
+    generateNonce,
   };
 }

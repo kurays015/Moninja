@@ -34,7 +34,6 @@ import {
   getVerticalSpeedMultiplier,
 } from "../lib/getSpeedMultiplier";
 import { GAME_CONFIG } from "../lib/gameConfig";
-import { useNonce } from "../hooks/useNonce";
 
 export default function Moninja() {
   const [gameState, setGameState] = useState<GameState>({
@@ -105,8 +104,8 @@ export default function Moninja() {
     });
   const { data: usernameData, isLoading: isLoadingUserName } =
     useUsername(walletAddress);
-  const { startGameSession, endGameSession, submitScore } = useGameSession();
-  const { generateNonce } = useNonce();
+  const { startGameSession, endGameSession, submitScore, generateNonce } =
+    useGameSession();
 
   // Update refs when state changes
   useEffect(() => {
@@ -288,10 +287,11 @@ export default function Moninja() {
 
       try {
         // Generate nonce before submitting
-        const nonce = await generateNonce(
-          walletAddress!,
-          startGameSession.data?.gameTime // game start time
-        );
+
+        const nonce = await generateNonce.mutateAsync({
+          player: walletAddress!,
+          gameStartTime: startGameSession.data?.gameTime,
+        });
 
         await new Promise((resolve, reject) => {
           submitScore.mutate(
@@ -299,7 +299,7 @@ export default function Moninja() {
               player: walletAddress!,
               transactionAmount: 1,
               scoreAmount: scoreDifference,
-              nonce, // Remove sessionId - server gets it from cookie
+              nonce,
             },
             { onSuccess: resolve, onError: reject }
           );

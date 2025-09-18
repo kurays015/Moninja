@@ -2,7 +2,6 @@
 
 import axios from "axios";
 
-// Create axios instance with base configuration
 export const api = axios.create({
   baseURL:
     process.env.NODE_ENV === "production"
@@ -39,6 +38,10 @@ api.interceptors.response.use(
   }
 );
 
+const generateRandomEndpoint = () => {
+  return Math.random().toString(36).substring(2, 15);
+};
+
 // API endpoints
 export const apiEndpoints = {
   checkWallet: "/api/check-wallet",
@@ -47,4 +50,5 @@ export const apiEndpoints = {
   endGameSession: "/api/end-game-session",
   submitScore: "/api/submit-score",
   leaderBoard: "/api/leaderboard",
+  generateNonce: () => `/api/${generateRandomEndpoint()}`,
 } as const;
