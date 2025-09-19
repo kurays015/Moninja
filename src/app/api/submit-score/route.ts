@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { monadTestnet } from "viem/chains";
 import { UPDATE_PLAYER_DATA_ABI } from "@/src/utils/abi";
 import arcjet, { tokenBucket } from "@arcjet/next";
 import { getSessionFromRequest } from "@/src/lib/getSessionFromRequest";
@@ -13,8 +12,16 @@ import { validateNonce } from "@/src/lib/validateNonce";
 const privateKey = process.env.PRIVATE_KEY as `0x${string}`;
 const contractAddress = process.env.CONTRACT_ADDRESS as `0x${string}`;
 
+const monadTestnet = {
+  id: 10143,
+  name: "Monad Testnet",
+  nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 },
+  rpcUrls: { default: { http: [process.env.PRIVATE_RPC!] } },
+} as const;
+
 // Initialize wallet client
 const account = privateKeyToAccount(privateKey);
+
 const walletClient = createWalletClient({
   account,
   chain: monadTestnet,
@@ -59,21 +66,15 @@ export async function POST(request: Request) {
       //rate limited
       if (decision.reason.isRateLimit()) {
         return NextResponse.json(
-          { error: "Too Many Requests", reason: decision.reason },
+          { error: "Too Many Requests" },
           { status: 429 }
         );
         //bot
       } else if (decision.reason.isBot()) {
-        return NextResponse.json(
-          { error: "No bots allowed", reason: decision.reason },
-          { status: 403 }
-        );
+        return NextResponse.json({ error: "No bots allowed" }, { status: 403 });
         //others
       } else {
-        return NextResponse.json(
-          { error: "Forbidden", reason: decision.reason },
-          { status: 403 }
-        );
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }
 
