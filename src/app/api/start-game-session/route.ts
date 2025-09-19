@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createGameSession, encryptSessionCookie } from "@/src/lib/sessions";
-import arcjet, { slidingWindow, tokenBucket } from "@arcjet/next";
+import arcjet, { tokenBucket } from "@arcjet/next";
 
 const aj = arcjet({
   key: process.env.ARCJET_KEY!,
@@ -14,30 +14,30 @@ const aj = arcjet({
       interval: 60, // Refill every minute
       capacity: 20, // Allow burst of 20 quick restarts
     }),
-    // Prevent only truly rapid spam (sub-second clicks)
-    slidingWindow({
-      mode: "LIVE",
-      interval: 3, // 3 second window
-      max: 3, // Max 3 requests in 3 seconds (prevents accidental double-clicks)
-    }),
-    // Reasonable per-minute limit for legitimate gameplay
-    slidingWindow({
-      mode: "LIVE",
-      interval: 60, // 1 minute window
-      max: 15, // Up to 15 games per minute (4-second average per game)
-    }),
-    // IP-based protection against distributed attacks
-    slidingWindow({
-      mode: "LIVE",
-      interval: 60, // 1 minute window
-      max: 3, // Max 3 requests per minute per IP
-    }),
-    // Long-term protection against sustained abuse
-    slidingWindow({
-      mode: "LIVE",
-      interval: 3600, // 1 hour window
-      max: 200, // Max 200 game sessions per hour (reasonable for addictive gameplay)
-    }),
+    // // Prevent only truly rapid spam (sub-second clicks)
+    // slidingWindow({
+    //   mode: "LIVE",
+    //   interval: 3, // 3 second window
+    //   max: 3, // Max 3 requests in 3 seconds (prevents accidental double-clicks)
+    // }),
+    // // Reasonable per-minute limit for legitimate gameplay
+    // slidingWindow({
+    //   mode: "LIVE",
+    //   interval: 60, // 1 minute window
+    //   max: 15, // Up to 15 games per minute (4-second average per game)
+    // }),
+    // // IP-based protection against distributed attacks
+    // slidingWindow({
+    //   mode: "LIVE",
+    //   interval: 60, // 1 minute window
+    //   max: 3, // Max 3 requests per minute per IP
+    // }),
+    // // Long-term protection against sustained abuse
+    // slidingWindow({
+    //   mode: "LIVE",
+    //   interval: 3600, // 1 hour window
+    //   max: 200, // Max 200 game sessions per hour (reasonable for addictive gameplay)
+    // }),
   ],
 });
 
