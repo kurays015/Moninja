@@ -14,7 +14,7 @@ import useAudioManager from "../hooks/useAudioManager";
 import SliceEffects from "./SliceEffects";
 import FrenzyNotification from "./FrenzyNotification";
 import Stats from "./Stats";
-import MonadFruitSlashCounter from "./MonadFruitSlashCounter";
+import SlashCounter from "./SlashCounter";
 import GameObjects from "./GameObjects";
 import ComboEffects from "./ComboEffects";
 import PauseModal from "./PauseModal";
@@ -28,10 +28,13 @@ import ResponsiveUserProfile from "./PlayerStatusPanel";
 import { ObjectPool } from "../lib/ObjectPool";
 import { MONANIMAL_IMAGES } from "../lib/monanimalsImages";
 import {
-  getSpeedMultiplierBalanced,
+  getGravityMultiplier,
+  getHorizontalSpeedMultiplier,
+  getRotationSpeedMultiplier,
   getVerticalSpeedMultiplier,
 } from "../lib/getSpeedMultiplier";
 import { GAME_CONFIG } from "../lib/gameConfig";
+import SpeedProgressionNotification from "./SpeedProgressionNotification";
 
 export default function Moninja() {
   const [gameState, setGameState] = useState<GameState>({
@@ -48,6 +51,8 @@ export default function Moninja() {
     frenzyMode: false,
     frenzyTimeRemaining: 0,
     isSubmitting: false,
+    isJohnSlashing: false,
+    johnSlashCount: 0,
   });
 
   const [objects, setObjects] = useState<GameObject[]>([]);
@@ -59,7 +64,9 @@ export default function Moninja() {
     ""
   );
   const [hasActiveSession, setHasActiveSession] = useState<boolean>(false);
-
+  const [speedWarning, setSpeedWarning] = useState<string | null>(null);
+  const [level, setLevel] = useState<string | null>(null);
+  const lastSpeedThresholdRef = useRef<number>(0);
   // Refs
   const gameAreaRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number | null>(null);
@@ -153,27 +160,53 @@ export default function Moninja() {
       startX: number,
       isBomb: boolean = false,
       frenzyMode: boolean = false,
-      isMonad: boolean = false
+      isMonad: boolean = false,
+      isJohn: boolean = false
     ): GameObject => {
-      console.log("Creating object at position:", startX);
+      console.log(
+        "Creating object at position:",
+        startX,
+        "Score:",
+        gameStateRef.current.score
+      );
       const pooledObj = objectPoolRef.current?.get() || {};
       const rect = gameAreaRef.current?.getBoundingClientRect();
 
-      const type = isBomb ? "bomb" : isMonad ? "monad" : "fruit";
-      const fruitName = isBomb
-        ? null
-        : isMonad
-        ? "monad.svg"
-        : MONANIMAL_IMAGES[Math.floor(Math.random() * MONANIMAL_IMAGES.length)];
+      // Determine object type with switch statement for cleaner code
+      let type: "fruit" | "bomb" | "monad" | "john";
+      let objectName: string | null;
 
-      // Calculate separate multipliers for different aspects
-      const horizontalSpeedMultiplier = getSpeedMultiplierBalanced(
-        gameStateRef.current.score
-      );
-      const verticalSpeedMultiplier = getVerticalSpeedMultiplier(
-        gameStateRef.current.score
-      );
-      const rotationMultiplier = Math.min(horizontalSpeedMultiplier, 1.8); // Cap rotation scaling
+      switch (true) {
+        case isBomb:
+          type = "bomb";
+          objectName = null;
+          break;
+        case isMonad:
+          type = "monad";
+          objectName = "monad.svg";
+          break;
+        case isJohn:
+          type = "john";
+          objectName = "john.jpg";
+          break;
+        default:
+          type = "fruit";
+          objectName =
+            MONANIMAL_IMAGES[
+              Math.floor(Math.random() * MONANIMAL_IMAGES.length)
+            ];
+          break;
+      }
+
+      // Get current score for speed calculation
+      const currentScore = gameStateRef.current.score;
+
+      // Calculate separate multipliers for different aspects using the new system
+      const horizontalSpeedMultiplier =
+        getHorizontalSpeedMultiplier(currentScore);
+      const verticalSpeedMultiplier = getVerticalSpeedMultiplier(currentScore);
+      const rotationMultiplier = getRotationSpeedMultiplier(currentScore);
+      const gravityMultiplier = getGravityMultiplier(currentScore);
 
       // Detect landscape mode and adjust velocities accordingly
       const screenWidth = window.innerWidth;
@@ -203,7 +236,7 @@ export default function Moninja() {
       );
 
       // Use screen height to scale vertical velocity appropriately
-      const screenHeightFactor = Math.min(screenHeight / 800, 1.5); // Normalize to 800px base
+      const screenHeightFactor = Math.min(screenHeight / 800, 1.5);
       const velocityYRange = Math.min(
         maxVelocityY * screenHeightFactor,
         baseVelocityY * verticalSpeedMultiplier * screenHeightFactor
@@ -214,51 +247,65 @@ export default function Moninja() {
         baseRotationSpeed * rotationMultiplier
       );
 
-      // Frenzy mode gets additional speed boost
+      // Frenzy mode gets additional speed boost (reduced for early game)
+      const frenzyBoost = currentScore < 200 ? 1.2 : 1.5;
       const frenzyMultiplier = frenzyMode
         ? isLandscapeMobile
-          ? 1.8
-          : 1.5 // faster in landscape mobile
+          ? Math.min(1.8, frenzyBoost * 1.2)
+          : frenzyBoost
         : 1;
-      // Adjust gravity based on screen size and orientation
-      let gravity = frenzyMode ? 0.25 : 0.35;
 
-      // Scale gravity with screen height to maintain consistent arc feel
+      // Adjust gravity based on speed progression and screen
+      let gravity = GAME_CONFIG.GRAVITY_PROGRESSION.BASE * gravityMultiplier;
+
+      if (frenzyMode) {
+        gravity *= 0.7;
+      }
+
       gravity *= Math.max(screenHeight / 800, 0.8);
 
       if (isLandscapeMobile) {
         gravity *= 1.2;
       }
 
+      // Create the game object
       const obj: GameObject = {
         ...pooledObj,
         id: Date.now() + Math.random(),
         type,
-        fruitName,
+        objectName,
         x: startX,
         y: (rect ? rect.height : window.innerHeight) - 80,
         velocityX: (Math.random() - 0.5) * velocityXRange * frenzyMultiplier,
         velocityY:
-          -(Math.random() * (velocityYRange * 0.5) + velocityYRange) *
+          -(Math.random() * (velocityYRange * 0.5) + velocityYRange * 0.5) *
           frenzyMultiplier,
         rotation: 0,
         rotationSpeed:
           (Math.random() - 0.5) * rotationSpeedRange * frenzyMultiplier,
         sliced: false,
         gravity: gravity,
-        slashCount: isMonad ? 0 : undefined,
-        maxSlashCount: isMonad ? 10 : undefined,
-        pointsPerSlash: isMonad ? 5 : undefined,
+        // Add slash count properties for monad and john objects
+        slashCount: type === "monad" || type === "john" ? 0 : undefined,
+        maxSlashCount: type === "monad" ? 10 : type === "john" ? 5 : undefined,
+        pointsPerSlash: type === "monad" ? 3 : type === "john" ? 6 : undefined,
       };
 
       // Play sound only if not paused
       if (!gameStateRef.current.gamePaused) {
-        if (isBomb) {
-          playSound("bomb-fuse", obj.id.toString());
-        } else if (isMonad) {
-          playSound("combo");
-        } else {
-          playSound("cat");
+        switch (type) {
+          case "bomb":
+            playSound("bomb-fuse", obj.id.toString());
+            break;
+          case "monad":
+            playSound("combo");
+            break;
+          case "john":
+            playSound("combo");
+            break;
+          default:
+            playSound("cat");
+            break;
         }
       }
 
@@ -381,7 +428,7 @@ export default function Moninja() {
           gameStateRef.current.frenzyMode &&
           !gameStateRef.current.bombHit
         ) {
-          const obj = createObject(x, false, true, false);
+          const obj = createObject(x, false, true, false, false);
           setObjects(prev => [...prev, obj]);
         }
       }, delay);
@@ -487,7 +534,7 @@ export default function Moninja() {
 
     if (gamePaused || gameOver || bombHit) return;
 
-    if (gameState.isMonadSlashing) return;
+    if (gameState.isMonadSlashing || gameState.isJohnSlashing) return;
 
     console.log("Creating object wave, score:", score);
 
@@ -528,13 +575,30 @@ export default function Moninja() {
         ) {
           const random = Math.random();
           const isBomb = random < bombChance;
-          const isMonad = !isBomb && random < GAME_CONFIG.MONAD_CHANCE;
-          const obj = createObject(x, isBomb, false, isMonad);
-          setObjects(prev => [...prev, obj]);
+
+          if (!isBomb) {
+            const specialRandom = Math.random(); // New random for special objects
+            const isMonad = specialRandom < GAME_CONFIG.MONAD_CHANCE;
+            const isJohn =
+              !isMonad &&
+              specialRandom <
+                GAME_CONFIG.MONAD_CHANCE + GAME_CONFIG.JOHN_CHANCE;
+
+            const obj = createObject(x, false, false, isMonad, isJohn);
+            setObjects(prev => [...prev, obj]);
+          } else {
+            const obj = createObject(x, true, false, false, false);
+            setObjects(prev => [...prev, obj]);
+          }
         }
       }, i * 200);
     });
-  }, [createObject, manageFrenzyMode, gameState.isMonadSlashing]);
+  }, [
+    createObject,
+    manageFrenzyMode,
+    gameState.isMonadSlashing,
+    gameState.isJohnSlashing,
+  ]);
 
   //Improved game spawning with better frenzy integration
   useEffect(() => {
@@ -770,7 +834,7 @@ export default function Moninja() {
       );
 
       if (distance < 80) {
-        // Create watermelon slice effect
+        // Create monad slice effect
         const monadSliceEffect: SliceEffect = {
           id: Date.now() + Math.random(),
           x: startButton.x,
@@ -813,7 +877,7 @@ export default function Moninja() {
     setObjects(prevObjects => {
       const newObjects = [...prevObjects];
       const newSliceEffects: SliceEffect[] = [];
-      let pointsEarned = 0; // Will be incremented by 1 for each successful slash
+      let pointsEarned = 0; // points per slash
 
       for (let objIndex = 0; objIndex < newObjects.length; objIndex++) {
         const obj = newObjects[objIndex];
@@ -857,8 +921,8 @@ export default function Moninja() {
             }
 
             updateGameState({ monadSlashCount: newSlashCount });
-            // Each monad slash is worth exactly 5 point
-            pointsEarned += 5;
+            // Each monad slash is worth exactly 3 point
+            pointsEarned += 3;
 
             if (!gameStateRef.current.gamePaused) {
               playSound(
@@ -868,12 +932,11 @@ export default function Moninja() {
 
             // Create monad slice effects
             if (newSlashCount >= maxSlashCount) {
-              // Final monad destruction - create explosion effect
               newSliceEffects.push({
                 id: Date.now() + Math.random(),
                 x: obj.x,
                 y: obj.y,
-                type: "monad-explosion",
+                type: "monad-shatter",
                 imageSrc: "/monad.svg",
                 width: 120,
                 height: 120,
@@ -894,6 +957,72 @@ export default function Moninja() {
                 y: obj.y,
                 type: "monad",
                 imageSrc: "/monad.svg",
+                width: 80,
+                height: 80,
+                angle:
+                  (Math.atan2(
+                    lastPoint.y - secondLastPoint.y,
+                    lastPoint.x - secondLastPoint.x
+                  ) *
+                    180) /
+                  Math.PI,
+              });
+            }
+          }
+        } else if (obj.type === "john") {
+          const currentSlashCount = obj.slashCount || 0;
+          const maxSlashCount = obj.maxSlashCount || 5;
+
+          if (currentSlashCount < maxSlashCount) {
+            const newSlashCount = currentSlashCount + 1;
+            newObjects[objIndex] = {
+              ...obj,
+              slashCount: newSlashCount,
+              sliced: newSlashCount >= maxSlashCount,
+            };
+
+            if (newSlashCount === 1) {
+              updateGameState({ isJohnSlashing: true, johnSlashCount: 0 });
+            }
+
+            updateGameState({ johnSlashCount: newSlashCount });
+            // Each john slash is worth exactly 6 points (as defined in createObject)
+            pointsEarned += 6;
+
+            if (!gameStateRef.current.gamePaused) {
+              playSound(
+                newSlashCount >= maxSlashCount ? "combo-blitz-6" : "combo"
+              );
+            }
+
+            // Create john slice effects
+            if (newSlashCount >= maxSlashCount) {
+              // Final john destruction - create electric shatter effect
+              newSliceEffects.push({
+                id: Date.now() + Math.random(),
+                x: obj.x,
+                y: obj.y,
+                type: "john-shatter",
+                imageSrc: "/john.jpg",
+                width: 120,
+                height: 120,
+                angle:
+                  (Math.atan2(
+                    lastPoint.y - secondLastPoint.y,
+                    lastPoint.x - secondLastPoint.x
+                  ) *
+                    180) /
+                  Math.PI,
+              });
+              updateGameState({ isJohnSlashing: false, johnSlashCount: 0 });
+            } else {
+              // Regular john slash effect with electric theme
+              newSliceEffects.push({
+                id: Date.now() + Math.random(),
+                x: obj.x,
+                y: obj.y,
+                type: "john",
+                imageSrc: "/john.jpg",
                 width: 80,
                 height: 80,
                 angle:
@@ -938,7 +1067,7 @@ export default function Moninja() {
             imageSrc:
               obj.type === "bomb"
                 ? "/Bomb.webp"
-                : `/monanimals/${obj.fruitName ?? "MolandakHD.png"}`,
+                : `/monanimals/${obj.objectName ?? "MolandakHD.png"}`,
             width: 80,
             height: 80,
             angle:
@@ -1025,7 +1154,8 @@ export default function Moninja() {
     if (
       gameStateRef.current.gamePaused ||
       gameStateRef.current.bombHit ||
-      gameStateRef.current.isMonadSlashing
+      gameStateRef.current.isMonadSlashing ||
+      gameStateRef.current.isJohnSlashing
     )
       return;
 
@@ -1272,6 +1402,47 @@ export default function Moninja() {
     };
   }, [eventHandlers]);
 
+  // Add effect to track speed progression and show warnings
+  useEffect(() => {
+    if (!gameState.gameStarted || gameState.gameOver) return;
+
+    const currentScore = gameState.score;
+    const thresholds = GAME_CONFIG.SPEED_PROGRESSION.THRESHOLDS;
+
+    // Find the current threshold
+    for (let i = thresholds.length - 1; i >= 0; i--) {
+      const threshold = thresholds[i];
+      if (
+        currentScore >= threshold.score &&
+        threshold.score > lastSpeedThresholdRef.current
+      ) {
+        if (threshold.message) {
+          // Show speed warning
+          setSpeedWarning(threshold.message);
+          setLevel(threshold.message);
+          lastSpeedThresholdRef.current = threshold.score;
+
+          // Play warning sound if available
+          if (!gameState.gamePaused) {
+            playSound("combo"); // Or create a specific warning sound
+          }
+
+          // Hide warning after 3 seconds
+          setTimeout(() => {
+            setSpeedWarning(null);
+          }, 3000);
+        }
+        break;
+      }
+    }
+  }, [
+    gameState.score,
+    gameState.gameStarted,
+    gameState.gameOver,
+    gameState.gamePaused,
+    playSound,
+  ]);
+
   // Memoized game stats and functions
   const gameStats: GameStats = useMemo(
     () => ({
@@ -1285,7 +1456,6 @@ export default function Moninja() {
   const resetGame = useCallback(() => {
     setGameState({
       score: 0,
-      // Removed localScore from reset
       submittedScore: 0,
       gameOver: false,
       gameStarted: false,
@@ -1298,6 +1468,8 @@ export default function Moninja() {
       frenzyMode: false,
       frenzyTimeRemaining: 0,
       isSubmitting: false,
+      isJohnSlashing: false,
+      johnSlashCount: 0,
     });
     setObjects([]);
     setStartButton(null);
@@ -1305,7 +1477,9 @@ export default function Moninja() {
     setSliceEffects([]);
     setComboEffects([]);
     setFrenzyNotification("");
+    setSpeedWarning(null); // Reset speed warning
     lastSliceTimeRef.current = 0;
+    lastSpeedThresholdRef.current = 0; // Reset threshold tracker
     clearAllTimers();
   }, [clearAllTimers]);
 
@@ -1340,7 +1514,11 @@ export default function Moninja() {
         score={gameState.score}
       />
 
-      <Stats gameStarted={gameState.gameStarted} score={gameState.score} />
+      <Stats
+        gameStarted={gameState.gameStarted}
+        score={gameState.score}
+        level={level}
+      />
 
       <PauseButton
         bombHit={gameState.bombHit}
@@ -1359,10 +1537,12 @@ export default function Moninja() {
       />
 
       <FrenzyNotification notificationMessage={frenzyNotification} />
+      <SpeedProgressionNotification message={speedWarning} />
 
-      <MonadFruitSlashCounter
-        isMonadSlashing={gameState.isMonadSlashing}
-        monadSlashCount={gameState.monadSlashCount}
+      <SlashCounter
+        isMonad={gameState.isMonadSlashing}
+        isSlashing={gameState.isMonadSlashing || gameState.isJohnSlashing}
+        slashCount={gameState.monadSlashCount || gameState.johnSlashCount}
       />
 
       {usernameData?.hasUsername &&

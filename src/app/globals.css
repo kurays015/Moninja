@@ -625,3 +625,128 @@ input[type="range"]::-moz-range-thumb:hover {
     display: none !important;
   }
 }
+
+/* john effect */
+
+@keyframes johnHalfLeft {
+  to {
+    transform: translateX(-15px) translateY(-8px) rotate(-12deg);
+    opacity: 0;
+  }
+}
+
+@keyframes johnHalfRight {
+  to {
+    transform: translateX(15px) translateY(-8px) rotate(12deg);
+    opacity: 0;
+  }
+}
+
+@keyframes johnElectricRing1 {
+  to {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+@keyframes johnElectricRing2 {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+@keyframes johnLightningSlash {
+  0% {
+    opacity: 1;
+    transform: scaleX(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes johnElectricParticle {
+  to {
+    transform: translate(-50%, -50%) rotate(var(--particle-angle))
+      translateX(var(--particle-distance))
+      rotate(calc(-1 * var(--particle-angle)));
+    opacity: 0;
+  }
+}
+
+@keyframes johnLightningBolt {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--bolt-angle))
+      translateX(var(--bolt-distance)) scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--bolt-angle))
+      translateX(var(--bolt-distance)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--bolt-angle))
+      translateX(var(--bolt-distance)) scale(0.5);
+  }
+}
+
+@keyframes johnElectricFlash {
+  0% {
+    opacity: 0.8;
+    transform: scale(0);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+@keyframes johnElectricShatter {
+  to {
+    transform: translate(-50%, -50%) rotate(var(--shatter-angle))
+      translateX(var(--shatter-distance)) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes johnElectricExplosion {
+  0% {
+    opacity: 0.9;
+    transform: scale(0);
+  }
+  30% {
+    opacity: 0.7;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(3);
+  }
+}
+
+@keyframes johnElectricDischarge {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--discharge-angle)) scaleY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--discharge-angle)) scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--discharge-angle)) scaleY(0.5);
+  }
+}

@@ -154,6 +154,7 @@ export default function GameOverModal({
                   : ""}
               </p>
               <button
+                disabled={isSubmittingScore}
                 onClick={handleButtonClick}
                 onTouchEnd={handleButtonClick}
                 onMouseDown={e => e.stopPropagation()}
@@ -164,7 +165,7 @@ export default function GameOverModal({
                   rounded-xl landscape:rounded-lg
                   transition-all duration-300 font-bold text-yellow-100 
                   hover:scale-105 active:scale-95 drop-shadow-xl
-                  cursor-pointer select-none"
+                   select-none disabled:opacity-40 disabled:text-gray-300"
                 style={{ touchAction: "manipulation" }}
               >
                 ⚔️ SLASH MORE ⚔️

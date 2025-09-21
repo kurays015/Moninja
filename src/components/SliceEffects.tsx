@@ -45,7 +45,6 @@ export default function SliceEffects({ sliceEffects }: SliceEffectsProps) {
                   draggable={false}
                 />
               </div>
-
               {/* Right half image */}
               <div
                 className="absolute overflow-hidden"
@@ -78,6 +77,187 @@ export default function SliceEffects({ sliceEffects }: SliceEffectsProps) {
                 }}
               />
             </div>
+          ) : effect.type === "john" ? (
+            <div
+              className="relative"
+              style={{ width: effect.width ?? 80, height: effect.height ?? 80 }}
+            >
+              {/* Left half of john */}
+              <div
+                className="absolute overflow-hidden"
+                style={{
+                  left: 0,
+                  top: 0,
+                  width: (effect.width ?? 80) / 2,
+                  height: effect.height ?? 80,
+                  clipPath: "inset(0 50% 0 0)",
+                  animation: "johnHalfLeft 0.9s ease-out forwards",
+                }}
+              >
+                <Image
+                  src={effect.imageSrc ?? "/john.jpg"}
+                  alt="john-left"
+                  width={effect.width ?? 80}
+                  height={effect.height ?? 80}
+                  className="object-contain drop-shadow-[0_0_25px_cyan]"
+                  draggable={false}
+                />
+              </div>
+              {/* Right half of john */}
+              <div
+                className="absolute overflow-hidden"
+                style={{
+                  right: 0,
+                  top: 0,
+                  width: (effect.width ?? 80) / 2,
+                  height: effect.height ?? 80,
+                  clipPath: "inset(0 0 0 50%)",
+                  animation: "johnHalfRight 0.9s ease-out forwards",
+                }}
+              >
+                <Image
+                  src={effect.imageSrc ?? "/john.jpg"}
+                  alt="john-right"
+                  width={effect.width ?? 80}
+                  height={effect.height ?? 80}
+                  className="object-contain drop-shadow-[0_0_25px_cyan]"
+                  draggable={false}
+                />
+              </div>
+              {/* Electric shockwave rings */}
+              <div
+                className="absolute inset-0 border-2 border-cyan-400 rounded-full"
+                style={{
+                  animation: "johnElectricRing1 0.6s ease-out forwards",
+                }}
+              />
+              <div
+                className="absolute inset-0 border border-blue-300 rounded-full"
+                style={{
+                  animation: "johnElectricRing2 0.8s ease-out forwards",
+                  animationDelay: "0.1s",
+                }}
+              />
+              {/* Lightning slash line */}
+              <div
+                className="absolute w-24 h-2 rounded-full bg-gradient-to-r from-cyan-300 via-blue-400 to-cyan-500"
+                style={{
+                  left: "-8px",
+                  top: (effect.height ?? 80) / 2 - 4,
+                  boxShadow:
+                    "0 0 30px rgba(6, 182, 212, 1), 0 0 15px rgba(59, 130, 246, 0.8)",
+                  animation: "johnLightningSlash 0.5s ease-out forwards",
+                }}
+              />
+              {/* Electric particles */}
+              {[...Array(8)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-1.5 h-1.5 bg-gradient-to-r from-cyan-300 to-blue-400 rounded-full"
+                  style={
+                    {
+                      left: "50%",
+                      top: "50%",
+                      "--particle-angle": `${i * 45}deg`,
+                      "--particle-distance": "35px",
+                      animation: "johnElectricParticle 0.8s ease-out forwards",
+                      animationDelay: `${i * 0.08}s`,
+                      boxShadow: "0 0 8px rgba(6, 182, 212, 0.8)",
+                    } as React.CSSProperties
+                  }
+                />
+              ))}
+              {/* Lightning bolts */}
+              {[...Array(4)].map((_, i) => (
+                <div
+                  key={`bolt-${i}`}
+                  className="absolute w-0.5 h-6 bg-gradient-to-b from-cyan-200 to-blue-300 rounded-full"
+                  style={
+                    {
+                      left: "50%",
+                      top: "50%",
+                      transform: "translate(-50%, -50%)",
+                      "--bolt-angle": `${i * 90 + 30}deg`,
+                      "--bolt-distance": "20px",
+                      animation: "johnLightningBolt 0.4s ease-out forwards",
+                      animationDelay: `${i * 0.05}s`,
+                      boxShadow: "0 0 10px rgba(6, 182, 212, 1)",
+                    } as React.CSSProperties
+                  }
+                />
+              ))}
+              {/* Center electric flash */}
+              <div
+                className="absolute inset-0 bg-gradient-radial from-cyan-300 via-blue-400 to-transparent rounded-full opacity-60"
+                style={{
+                  animation: "johnElectricFlash 0.3s ease-out forwards",
+                }}
+              />
+            </div>
+          ) : effect.type === "john-shatter" ? (
+            <div
+              className="relative"
+              style={{
+                width: effect.width ?? 80,
+                height: effect.height ?? 80,
+              }}
+            >
+              {/* Shattering john pieces with electric effect */}
+              {[...Array(10)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute"
+                  style={
+                    {
+                      left: "50%",
+                      top: "50%",
+                      width: "18px",
+                      height: "18px",
+                      transform: "translate(-50%, -50%)",
+                      "--shatter-angle": `${i * 36}deg`,
+                      "--shatter-distance": "80px",
+                      animation: "johnElectricShatter 2.0s ease-out forwards",
+                      animationDelay: `${i * 0.08}s`,
+                    } as React.CSSProperties
+                  }
+                >
+                  <Image
+                    src={effect.imageSrc ?? "/john.jpg"}
+                    alt="john-piece"
+                    width={18}
+                    height={18}
+                    className="w-full h-full object-contain opacity-90 drop-shadow-[0_0_8px_cyan]"
+                    draggable={false}
+                  />
+                </div>
+              ))}
+              {/* Electric explosion effect */}
+              <div
+                className="absolute inset-0 bg-gradient-radial from-cyan-200 via-blue-300 to-transparent rounded-full"
+                style={{
+                  animation: "johnElectricExplosion 1.0s ease-out forwards",
+                  boxShadow: "0 0 50px rgba(6, 182, 212, 0.8)",
+                }}
+              />
+              {/* Electric discharge lines */}
+              {[...Array(12)].map((_, i) => (
+                <div
+                  key={`discharge-${i}`}
+                  className="absolute w-0.5 h-20 bg-gradient-to-t from-transparent via-cyan-300 to-transparent"
+                  style={
+                    {
+                      left: "50%",
+                      top: "50%",
+                      transform: "translate(-50%, -50%)",
+                      "--discharge-angle": `${i * 30}deg`,
+                      animation: "johnElectricDischarge 0.8s ease-out forwards",
+                      animationDelay: `${i * 0.03}s`,
+                      boxShadow: "0 0 4px rgba(6, 182, 212, 0.6)",
+                    } as React.CSSProperties
+                  }
+                />
+              ))}
+            </div>
           ) : effect.type === "monad" ? (
             <div
               className="relative"
@@ -104,7 +284,6 @@ export default function SliceEffects({ sliceEffects }: SliceEffectsProps) {
                   draggable={false}
                 />
               </div>
-
               {/* Right half of monad */}
               <div
                 className="absolute overflow-hidden"
@@ -126,7 +305,6 @@ export default function SliceEffects({ sliceEffects }: SliceEffectsProps) {
                   draggable={false}
                 />
               </div>
-
               {/* Shockwave ring */}
               <div
                 className="absolute inset-0 border-2 border-purple-400 rounded-full"
@@ -134,7 +312,6 @@ export default function SliceEffects({ sliceEffects }: SliceEffectsProps) {
                   animation: "monadRing 0.5s ease-out forwards",
                 }}
               />
-
               {/* Slash line */}
               <div
                 className="absolute w-24 h-2 rounded-full bg-gradient-to-r from-purple-400 via-pink-500 to-purple-600"
@@ -145,7 +322,6 @@ export default function SliceEffects({ sliceEffects }: SliceEffectsProps) {
                   animation: "monadSlashLine 0.4s ease-out forwards",
                 }}
               />
-
               {/* Particles */}
               {[...Array(6)].map((_, i) => (
                 <div
@@ -162,76 +338,6 @@ export default function SliceEffects({ sliceEffects }: SliceEffectsProps) {
                   }
                 />
               ))}
-            </div>
-          ) : effect.type === "monad-explosion" ? (
-            <div
-              className="relative"
-              style={{
-                width: effect.width ?? 120,
-                height: effect.height ?? 120,
-              }}
-            >
-              {/* Final monad explosion effect */}
-              <div
-                className="absolute inset-0"
-                style={{
-                  animation: "monadFinalExplosion 1.2s ease-out forwards",
-                }}
-              >
-                <Image
-                  src={effect.imageSrc ?? "/monad.svg"}
-                  alt="monad-explosion"
-                  width={effect.width ?? 120}
-                  height={effect.height ?? 120}
-                  className="w-full h-full object-contain drop-shadow-[0_0_50px_purple]"
-                  draggable={false}
-                />
-              </div>
-
-              {/* Explosion fragments */}
-              {[...Array(12)].map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute w-3 h-3 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full"
-                  style={
-                    {
-                      left: "50%",
-                      top: "50%",
-                      transform: "translate(-50%, -50%)",
-                      "--explode-x": `${
-                        Math.cos((i * 30 * Math.PI) / 180) * 80
-                      }px`,
-                      "--explode-y": `${
-                        Math.sin((i * 30 * Math.PI) / 180) * 80
-                      }px`,
-                      "--explode-rotate": `${i * 30}deg`,
-                      animation:
-                        "monadExplosionFragment 1.0s ease-out forwards",
-                      animationDelay: `${i * 0.05}s`,
-                    } as React.CSSProperties
-                  }
-                />
-              ))}
-
-              {/* Multiple explosion rings */}
-              {[...Array(3)].map((_, i) => (
-                <div
-                  key={`ring-${i}`}
-                  className="absolute inset-0 border-2 border-purple-400 rounded-full"
-                  style={{
-                    animation: "monadSlashRing 1.0s ease-out forwards",
-                    animationDelay: `${i * 0.2}s`,
-                  }}
-                />
-              ))}
-
-              {/* Central flash */}
-              <div
-                className="absolute inset-0 bg-gradient-radial from-purple-400 to-transparent rounded-full"
-                style={{
-                  animation: "monadFinalExplosion 0.8s ease-out forwards",
-                }}
-              />
             </div>
           ) : effect.type === "monad-shatter" ? (
             <div
@@ -270,7 +376,6 @@ export default function SliceEffects({ sliceEffects }: SliceEffectsProps) {
                   />
                 </div>
               ))}
-
               {/* Shatter flash effect */}
               <div
                 className="absolute inset-0 bg-gradient-radial from-purple-400 to-transparent rounded-full"

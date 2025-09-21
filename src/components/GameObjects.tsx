@@ -33,7 +33,7 @@ export default function GameObjects({ objects }: GameObjectsProps) {
           ) : obj.type === "fruit" ? (
             <div className="relative w-full h-full">
               <Image
-                src={`/monanimals/${obj.fruitName ?? "MolandakHD.png"}`}
+                src={`/monanimals/${obj.objectName ?? "MolandakHD.png"}`}
                 alt="monanimal"
                 width={100}
                 height={100}
@@ -49,6 +49,24 @@ export default function GameObjects({ objects }: GameObjectsProps) {
                 width={100}
                 height={100}
                 className="w-full h-full object-contain drop-shadow-[0_0_20px_purple]"
+                draggable={false}
+              />
+
+              {/* Simple slash count indicator */}
+              {obj.slashCount && obj.slashCount > 0 && (
+                <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-purple-300">
+                  {obj.slashCount}
+                </div>
+              )}
+            </div>
+          ) : obj.type === "john" ? (
+            <div className="relative w-full h-full">
+              <Image
+                src={`/john.jpg`}
+                alt="monad"
+                width={100}
+                height={100}
+                className="w-full h-full object-contain drop-shadow-[0_0_20px_purple] rounded-full"
                 draggable={false}
               />
 

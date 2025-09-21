@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 interface PauseButtonProps {
   gameStarted: boolean;
   gamePaused: boolean;
@@ -6,7 +8,7 @@ interface PauseButtonProps {
   onTogglePause: () => void;
 }
 
-export default function PauseButton({
+export function PauseButton({
   bombHit,
   gameOver,
   gamePaused,
@@ -49,3 +51,5 @@ export default function PauseButton({
     </>
   );
 }
+
+export default memo(PauseButton);

@@ -1,6 +1,6 @@
 export interface GameObject {
   id: number;
-  type: "fruit" | "bomb" | "monad";
+  type: "fruit" | "bomb" | "monad" | "john";
   x: number;
   y: number;
   velocityX: number;
@@ -9,7 +9,7 @@ export interface GameObject {
   rotationSpeed: number;
   sliced: boolean;
   gravity: number;
-  fruitName: string | null;
+  objectName: string | null;
   // Monad-specific properties
   slashCount?: number; // Number of times slashed (max 10)
   maxSlashCount?: number; // Maximum slashes allowed (10 for monad)
@@ -31,17 +31,13 @@ export interface SliceEffect {
   id: number;
   x: number;
   y: number;
-  type:
-    | "fruit"
-    | "bomb"
-    | "start"
-    | "monad"
-    | "monad-explosion"
-    | "monad-shatter";
+  type: "fruit" | "bomb" | "monad" | "monad-shatter" | "john" | "john-shatter";
   imageSrc?: string; // actual image to render in halves
   width?: number; // pixels
   height?: number; // pixels
   angle: number;
+  particleColor?: string;
+  particleCount?: number;
 }
 
 export interface ComboEffect {
@@ -49,6 +45,7 @@ export interface ComboEffect {
   x: number;
   y: number;
   count: number;
+  text?: string; // Optional custom text for special bonuses
 }
 
 export interface StartButton {
@@ -132,6 +129,8 @@ export interface GameState {
   frenzyMode: boolean;
   frenzyTimeRemaining: number;
   isSubmitting: boolean;
+  isJohnSlashing: boolean;
+  johnSlashCount: number;
 }
 
 export interface GameSession {
