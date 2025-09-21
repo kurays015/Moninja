@@ -6,12 +6,16 @@ interface GameOverModalProps {
   gameOver: boolean;
   gameStats: GameStats;
   resetGame: () => void;
+  isSubmittingScore: boolean;
+  submittedScore: number;
 }
 
 export default function GameOverModal({
   gameOver,
   gameStats,
   resetGame,
+  isSubmittingScore,
+  submittedScore,
 }: GameOverModalProps) {
   const handleButtonClick = (e: React.MouseEvent | React.TouchEvent) => {
     // Stop event from bubbling to parent game area
@@ -72,7 +76,7 @@ export default function GameOverModal({
                     height={50}
                     width={50}
                     alt="chog"
-                    className="portrait:w-12 portrait:h-12 landscape:w-8 landscape:h-8"
+                    className="portrait:w-12 portrait:h-12 landscape:w-24 landscape:h-24"
                   />
                 </div>
 
@@ -122,7 +126,7 @@ export default function GameOverModal({
                     <div
                       className="
                       portrait:text-xs
-                      landscape:text-[10px] landscape:leading-tight
+                      landscape:text-[16px] landscape:leading-tight
                       uppercase tracking-wider text-yellow-300/90 font-bold"
                     >
                       🍉score
@@ -136,8 +140,19 @@ export default function GameOverModal({
             <div
               className="relative z-10 
               portrait:mt-6
-              landscape:mt-3 landscape:flex landscape:justify-center"
+              landscape:mt-3 landscape:flex landscape:justify-center landscape:flex-col"
             >
+              <p
+                className="portrait:text-lg portrait:md:text-xl portrait:mb-4
+                landscape:text-base landscape:mb-2 landscape:leading-tight
+                text-yellow-200/90 font-medium drop-shadow-lg"
+              >
+                {isSubmittingScore
+                  ? "Submitting Score..."
+                  : submittedScore > 0
+                  ? `Score successfully submitted!`
+                  : ""}
+              </p>
               <button
                 onClick={handleButtonClick}
                 onTouchEnd={handleButtonClick}
@@ -145,7 +160,7 @@ export default function GameOverModal({
                 onTouchStart={e => e.stopPropagation()}
                 className="wood-button wood-texture 
                   portrait:w-full portrait:py-3 portrait:px-6 portrait:text-sm
-                  landscape:px-4 landscape:py-2 landscape:text-xs landscape:min-w-[120px]
+                  landscape:px-4 landscape:py-2 landscape:text-base landscape:min-w-[120px]
                   rounded-xl landscape:rounded-lg
                   transition-all duration-300 font-bold text-yellow-100 
                   hover:scale-105 active:scale-95 drop-shadow-xl

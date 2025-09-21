@@ -1402,6 +1402,8 @@ export default function Moninja() {
         gameOver={gameState.gameOver}
         gameStats={gameStats}
         resetGame={resetGame}
+        isSubmittingScore={gameState.isSubmitting}
+        submittedScore={gameState.submittedScore}
       />
     </div>
   );
