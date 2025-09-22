@@ -24,17 +24,17 @@ export const GAME_CONFIG = {
   SPEED_PROGRESSION: {
     // Score thresholds and their corresponding speed multipliers
     THRESHOLDS: [
-      { score: 0, multiplier: 0.4, message: null }, // Very slow start (40% speed)
-      { score: 50, multiplier: 0.5, message: null },
-      { score: 100, multiplier: 0.6, message: null },
-      { score: 200, multiplier: 0.75, message: null },
-      { score: 300, multiplier: 0.9, message: "Speed Increasing!" },
-      { score: 400, multiplier: 1.0, message: "Normal Speed!" }, // Normal speed
-      { score: 500, multiplier: 1.15, message: "Getting Faster!" },
-      { score: 600, multiplier: 1.3, message: "High Speed!" },
-      { score: 700, multiplier: 1.5, message: "DANGER ZONE!" },
-      { score: 850, multiplier: 1.75, message: "EXTREME SPEED!" },
-      { score: 1000, multiplier: 2.0, message: "MAXIMUM VELOCITY!" }, // Maximum speed (200%)
+      { score: 0, multiplier: 0.5, message: null }, // Gentle start (50% speed)
+      { score: 75, multiplier: 0.6, message: null },
+      { score: 150, multiplier: 0.7, message: null },
+      { score: 250, multiplier: 0.8, message: null },
+      { score: 350, multiplier: 0.9, message: "Speed Increasing!" },
+      { score: 450, multiplier: 0.92, message: "Normal Speed!" }, // Normal speed
+      { score: 600, multiplier: 0.95, message: "Getting Faster!" },
+      { score: 800, multiplier: 0.98, message: "High Speed!" },
+      { score: 1000, multiplier: 1, message: "DANGER ZONE!" },
+      { score: 1300, multiplier: 1.02, message: "EXTREME SPEED!" },
+      { score: 1700, multiplier: 1.05, message: "MAXIMUM VELOCITY!" }, // Maximum speed (165%)
     ],
 
     // Different scaling for vertical vs horizontal movement

@@ -9,7 +9,7 @@ export default function SlashCounter({
   slashCount,
   isMonad,
 }: SlashCounterProps) {
-  const pointsAdded = isMonad ? 3 : 6;
+  const pointsAdded = isMonad ? 2 : 3;
   return (
     <>
       {isSlashing && (

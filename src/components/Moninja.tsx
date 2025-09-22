@@ -288,7 +288,7 @@ export default function Moninja() {
         // Add slash count properties for monad and john objects
         slashCount: type === "monad" || type === "john" ? 0 : undefined,
         maxSlashCount: type === "monad" ? 10 : type === "john" ? 5 : undefined,
-        pointsPerSlash: type === "monad" ? 3 : type === "john" ? 6 : undefined,
+        pointsPerSlash: type === "monad" ? 2 : type === "john" ? 3 : undefined,
       };
 
       // Play sound only if not paused
@@ -921,8 +921,8 @@ export default function Moninja() {
             }
 
             updateGameState({ monadSlashCount: newSlashCount });
-            // Each monad slash is worth exactly 3 point
-            pointsEarned += 3;
+            // Each monad slash is worth exactly 2 point
+            pointsEarned += 2;
 
             if (!gameStateRef.current.gamePaused) {
               playSound(
@@ -986,8 +986,8 @@ export default function Moninja() {
             }
 
             updateGameState({ johnSlashCount: newSlashCount });
-            // Each john slash is worth exactly 6 points (as defined in createObject)
-            pointsEarned += 6;
+            // Each john slash is worth exactly 3 points (as defined in createObject)
+            pointsEarned += 3;
 
             if (!gameStateRef.current.gamePaused) {
               playSound(
