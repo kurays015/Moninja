@@ -26,6 +26,7 @@ export function validateGameData({
   if (
     typeof transactionAmount !== "number" ||
     transactionAmount < 0 ||
+    transactionAmount > 1 ||
     !Number.isInteger(transactionAmount)
   ) {
     return { success: false, error: "Invalid transaction amount" };

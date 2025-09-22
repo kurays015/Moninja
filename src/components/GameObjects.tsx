@@ -53,11 +53,11 @@ export default function GameObjects({ objects }: GameObjectsProps) {
               />
 
               {/* Simple slash count indicator */}
-              {obj.slashCount && obj.slashCount > 0 && (
+              {/* {obj.slashCount && obj.slashCount > 0 && (
                 <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-purple-300">
                   {obj.slashCount}
                 </div>
-              )}
+              )} */}
             </div>
           ) : obj.type === "john" ? (
             <div className="relative w-full h-full">
@@ -71,11 +71,11 @@ export default function GameObjects({ objects }: GameObjectsProps) {
               />
 
               {/* Simple slash count indicator */}
-              {obj.slashCount && obj.slashCount > 0 && (
+              {/* {obj.slashCount && obj.slashCount > 0 && (
                 <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-purple-300">
                   {obj.slashCount}
                 </div>
-              )}
+              )} */}
             </div>
           ) : null}
         </div>
