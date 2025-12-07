@@ -10,7 +10,7 @@ export const GAME_CONFIG = {
   BOMB_CHANCE_MAX: 0.4,
   BOMB_CHANCE_INCREASE: 0.002,
   MONAD_CHANCE: 0.02, // Chance to spawn Monad object (2%)
-  JOHN_CHANCE: 0.015, // Chance to spawn John object (1%)
+  JOHN_CHANCE: 0.015, // Chance to spawn John object (1.5%)
   FRENZY_TRIGGER_INTERVAL: 10,
   FRENZY_TRIGGER_CHANCE: 0.6,
   COLLISION_DISTANCE: 60,
